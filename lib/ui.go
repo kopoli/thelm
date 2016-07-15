@@ -53,11 +53,9 @@ func (u *ui) moveCursor(g *gocui.Gui, relpos int) (err error) {
 		y = minmax(0, y, maxy-1)
 	}
 
-	// fmt.Println("cursor",y + oy, "count", tw.Count)
-	// if y + oy > tw.Count {
-	// 	y = oy - tw.Count
-	// 	// y = 0
-	// }
+	if y + oy > u.cmd.Out.Count {
+		y = u.cmd.Out.Count - oy
+	}
 
 	err = v.SetCursor(x, y)
 	return
@@ -175,7 +173,6 @@ func (u *ui) triggerRun() (err error) {
 		return
 	}
 	args := strings.Split(line, " ")
-	fmt.Fprintln(output, "Command: ", line)
 	err = u.cmd.Run(args[0], args[1:]...)
 	return
 }
