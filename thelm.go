@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/jroimartin/gocui"
+	"github.com/kopoli/thelm/lib"
 )
 
 func printErr(err error, message string, arg ...string) {
@@ -21,72 +21,14 @@ func fault(err error, message string, arg ...string) {
 	os.Exit(1)
 }
 
-
-func quit(g *gocui.Gui, v *gocui.View) error {
-	return gocui.ErrQuit
-}
-
-func keybindings(g *gocui.Gui) error {
-	if err := g.SetKeybinding("", gocui.KeyEsc, gocui.ModNone, quit); err != nil {
-		return err
-	}
-	if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
-		return err
-	}
-	return nil
-}
-
-func layout(g *gocui.Gui) (err error) {
-	maxx, maxy := g.Size()
-
-	v, err := g.SetView("output", -1, -1, maxx, maxy - 2)
-	if err == gocui.ErrUnknownView {
-		v.Highlight = true
-		fmt.Println(v, "Output goes here")
-		err = nil
-	}
-	if err != nil {
-		return
-	}
-
-	v, err = g.SetView("input", -1, maxy - 2, maxx, maxy)
-	if err == gocui.ErrUnknownView {
-		v.Editable = true
-		v.Title = "jepajee"
-		v.Wrap = true
-		err = nil
-		g.SetCurrentView("input")
-	}
-	if err != nil {
-		return
-	}
-
-	return
-}
-
 func main() {
+	opts := thelm.GetOptions()
+	line, err := thelm.Ui(opts)
 
-	gui := gocui.NewGui()
-	err := gui.Init()
 	if err != nil {
-		fault(err, "Initializing UI library failed")
-	}
-	defer gui.Close()
-
-	gui.SetLayout(layout)
-	err = keybindings(gui)
-	if err != nil {
-		fault(err, "Setting keybindings failed")
+		fault(err, "Running user interface failed")
 	}
 
-	gui.SelBgColor = gocui.ColorGreen
-	gui.SelFgColor = gocui.ColorBlack
-	gui.Cursor = true
-
-	fmt.Println("TAALLA!!")
-
-	err = gui.MainLoop()
-	if err != nil && err != gocui.ErrQuit {
-		fault(err, "Running UI main loop failed")
-	}
+	fmt.Print(line)
+	os.Exit(0)
 }
