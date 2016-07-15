@@ -25,6 +25,9 @@ func main() {
 	opts := thelm.GetOptions()
 	line, err := thelm.Ui(opts)
 
+	if err == thelm.UiAbortedErr {
+		os.Exit(1)
+	}
 	if err != nil {
 		fault(err, "Running user interface failed")
 	}

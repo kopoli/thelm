@@ -8,14 +8,16 @@ import (
 	"github.com/jroimartin/gocui"
 )
 
+var UiAbortedErr = E.New("User interface was aborted")
+
 type ui struct {
 	cmd  Command
 	gui  *gocui.Gui
 	line string
 }
 
-func quit(g *gocui.Gui, v *gocui.View) error {
-	return gocui.ErrQuit
+func (u *ui)abort(g *gocui.Gui, v *gocui.View) error {
+	return UiAbortedErr
 }
 
 func minmax(low int, value int, high int) int {
@@ -86,8 +88,8 @@ func (u *ui) keybindings() (err error) {
 		key interface{}
 		f   func(*gocui.Gui, *gocui.View) error
 	}{
-		{gocui.KeyCtrlG, quit},
-		{gocui.KeyCtrlC, quit},
+		{gocui.KeyCtrlG, u.abort},
+		{gocui.KeyCtrlC, u.abort},
 		{gocui.KeyArrowDown, u.selectDown},
 		{gocui.KeyCtrlN, u.selectDown},
 		{gocui.KeyArrowUp, u.selectUp},
@@ -116,8 +118,8 @@ func (u *ui) setLayout(g *gocui.Gui) (err error) {
 		u.cmd.Out = TriggeringWriter{
 			Trigger: func() {
 				g.Execute(func(g *gocui.Gui) (err error) {
-					v, err := g.View("input")
-					v.Title = fmt.Sprintf("thelm - %d", u.cmd.Out.Count)
+					inp, err := g.View("input")
+					inp.Title = fmt.Sprintf("thelm - %d", u.cmd.Out.Count)
 					return
 				})
 			},
@@ -134,7 +136,9 @@ func (u *ui) setLayout(g *gocui.Gui) (err error) {
 		v.Title = "thelm"
 		v.Wrap = true
 		err = nil
-		fmt.Fprint(v, strings.Join(os.Args[1:], " "))
+		initial := strings.Join(os.Args[1:], " ")
+		fmt.Fprint(v, initial)
+		v.SetCursor(len(initial), 0)
 		g.SetCurrentView("input")
 	}
 	if err != nil {
@@ -216,6 +220,7 @@ func Ui(opt Options) (ret string, err error) {
 		return
 	}
 	defer UI.gui.Close()
+	defer UI.cmd.Finish()
 
 	UI.gui.Editor = &UI
 	UI.gui.SelBgColor = gocui.ColorGreen
@@ -235,12 +240,16 @@ func Ui(opt Options) (ret string, err error) {
 	})
 
 	err = UI.gui.MainLoop()
-	if err != nil && err != gocui.ErrQuit {
-		E.Annotate(err, "Running UI main loop failed")
+	ret = UI.line
+	if err == gocui.ErrQuit {
+		err = nil
+	}
+	if err == UiAbortedErr {
 		return
 	}
+	if err != nil {
+		E.Annotate(err, "Running UI main loop failed")
+	}
 
-	err = nil
-	ret = UI.line
 	return
 }
