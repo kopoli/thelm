@@ -2,7 +2,6 @@ package thelm
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/jroimartin/gocui"
@@ -12,13 +11,14 @@ import (
 var UiAbortedErr = E.New("User interface was aborted")
 
 type ui struct {
+	args []string
 	cmd  Command
 	gui  *gocui.Gui
 	line string
 
 	progname string
 
-	filter *Buffer
+	filter   *Buffer
 	prevline string
 }
 
@@ -145,8 +145,12 @@ func (u *ui) setLayout(g *gocui.Gui) (err error) {
 		u.cmd.Setup(func() {
 			g.Execute(func(g *gocui.Gui) (err error) {
 				inp, err := g.View("input")
-				inp.Title = fmt.Sprintf("%s - %d", u.progname,
-					u.cmd.Out.Count)
+				filtering := ""
+				if u.filter != nil {
+					filtering = " - filtering"
+				}
+				inp.Title = fmt.Sprintf("%s%s - %d", u.progname,
+					filtering, u.cmd.Out.Count)
 				return
 			})
 		}, v)
@@ -161,7 +165,7 @@ func (u *ui) setLayout(g *gocui.Gui) (err error) {
 		v.Title = u.progname
 		v.Wrap = true
 		err = nil
-		initial := strings.Join(os.Args[1:], " ")
+		initial := strings.Join(u.args, " ")
 		fmt.Fprint(v, initial)
 		v.SetCursor(len(initial), 0)
 		g.SetCurrentView("input")
@@ -262,10 +266,11 @@ func (u *ui) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 	}
 }
 
-func Ui(opts Options) (ret string, err error) {
+func Ui(opts Options, args []string) (ret string, err error) {
 
 	var UI ui
 	UI.progname = opts.Get("program-name", "thelm")
+	UI.args = args
 
 	UI.gui = gocui.NewGui()
 	err = UI.gui.Init()
@@ -290,6 +295,9 @@ func Ui(opts Options) (ret string, err error) {
 
 	UI.gui.Execute(func(g *gocui.Gui) error {
 		UI.triggerRun()
+		if opts.Get("enable-filtering", "") != "" {
+			UI.pushFilter(nil, nil)
+		}
 		return nil
 	})
 
