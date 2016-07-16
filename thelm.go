@@ -8,6 +8,13 @@ import (
 	"github.com/kopoli/thelm/lib"
 )
 
+
+var (
+	majorVersion = "0"
+	version      = "Undefined"
+	progVersion  = majorVersion + "-" + version
+)
+
 func printErr(err error, message string, arg ...string) {
 	msg := ""
 	if err != nil {
@@ -23,6 +30,9 @@ func fault(err error, message string, arg ...string) {
 
 func main() {
 	opts := thelm.GetOptions()
+	opts.Set("program-name", "thelm")
+	opts.Set("program-version", progVersion)
+
 	line, err := thelm.Ui(opts)
 
 	if err == thelm.UiAbortedErr {

@@ -14,6 +14,8 @@ type ui struct {
 	cmd  Command
 	gui  *gocui.Gui
 	line string
+
+	progname string
 }
 
 func (u *ui)abort(g *gocui.Gui, v *gocui.View) error {
@@ -113,16 +115,14 @@ func (u *ui) setLayout(g *gocui.Gui) (err error) {
 		v.Highlight = true
 		err = nil
 
-		u.cmd.Out = TriggeringWriter{
-			Trigger: func() {
-				g.Execute(func(g *gocui.Gui) (err error) {
-					inp, err := g.View("input")
-					inp.Title = fmt.Sprintf("thelm - %d", u.cmd.Out.Count)
-					return
-				})
-			},
-			Writer: v,
-		}
+		u.cmd.Setup(func() {
+			g.Execute(func(g *gocui.Gui) (err error) {
+				inp, err := g.View("input")
+				inp.Title = fmt.Sprintf("%s - %d", u.progname,
+					u.cmd.Out.Count)
+				return
+			})
+		}, v)
 	}
 	if err != nil {
 		return
@@ -131,7 +131,7 @@ func (u *ui) setLayout(g *gocui.Gui) (err error) {
 	v, err = g.SetView("input", -1, maxy-2, maxx, maxy)
 	if err == gocui.ErrUnknownView {
 		v.Editable = true
-		v.Title = "thelm"
+		v.Title = u.progname
 		v.Wrap = true
 		err = nil
 		initial := strings.Join(os.Args[1:], " ")
@@ -206,9 +206,10 @@ func (u *ui) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 	}
 }
 
-func Ui(opt Options) (ret string, err error) {
+func Ui(opts Options) (ret string, err error) {
 
 	var UI ui
+	UI.progname = opts.Get("program-name", "thelm")
 
 	UI.gui = gocui.NewGui()
 	err = UI.gui.Init()

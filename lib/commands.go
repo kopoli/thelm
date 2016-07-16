@@ -1,26 +1,13 @@
 package thelm
 
 import (
-	"bytes"
 	"io"
 	"os/exec"
 	"sync"
 )
 
-type TriggeringWriter struct {
-	Trigger func()
-	Writer  io.Writer
-	Count   int
-}
-
-func (tw *TriggeringWriter) Write(p []byte) (n int, err error) {
-	tw.Count = tw.Count + bytes.Count(p, []byte("\n"))
-	tw.Trigger()
-	return tw.Writer.Write(p)
-}
-
 type Command struct {
-	Out TriggeringWriter
+	Out Buffer
 
 	running bool
 	wg      sync.WaitGroup
@@ -34,6 +21,13 @@ type Command struct {
 // 		Out: make(TriggeringWriter),
 // 	}
 // }
+
+func (c *Command) Setup(trigger func(), out io.Writer) {
+	c.Out = Buffer{
+		Trigger:     trigger,
+		Passthrough: out,
+	}
+}
 
 func (c *Command) Finish() (err error) {
 	if c.running {
@@ -49,8 +43,7 @@ func (c *Command) Finish() (err error) {
 
 func (c *Command) Run(command string, args ...string) (err error) {
 	c.Finish()
-
-	c.Out.Count = 0
+	c.Out.Reset()
 
 	go func() {
 		c.wg.Add(1)
@@ -64,9 +57,6 @@ func (c *Command) Run(command string, args ...string) (err error) {
 
 		err = c.cmd.Run()
 
-		// if err != nil {
-		// 	// fmt.Println("running command failed:", err)
-		// }
 		c.running = false
 	}()
 
