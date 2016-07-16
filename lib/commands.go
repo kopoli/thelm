@@ -15,13 +15,6 @@ type Command struct {
 	cmd *exec.Cmd
 }
 
-//TODO
-// func CreateCommand(opt Options) (Command) {
-// 	return Command{
-// 		Out: make(TriggeringWriter),
-// 	}
-// }
-
 func (c *Command) Setup(trigger func(), out io.Writer) {
 	c.Out = Buffer{
 		Trigger:     trigger,

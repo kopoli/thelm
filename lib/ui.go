@@ -8,6 +8,7 @@ import (
 	"github.com/jroimartin/gocui"
 )
 
+// UiAbortedErr tells if user wanted to abort
 var UiAbortedErr = E.New("User interface was aborted")
 
 type ui struct {
@@ -16,6 +17,9 @@ type ui struct {
 	line string
 
 	progname string
+
+	filter *Buffer
+	prevline string
 }
 
 func (u *ui) abort(g *gocui.Gui, v *gocui.View) error {
@@ -85,6 +89,25 @@ func (u *ui) selectLine(g *gocui.Gui, v *gocui.View) (err error) {
 	return gocui.ErrQuit
 }
 
+func (u *ui) pushFilter(g *gocui.Gui, v *gocui.View) (err error) {
+	if u.filter != nil {
+		return
+	}
+	u.filter = &u.cmd.Out
+	u.prevline, err = u.clearInput("")
+	return
+}
+
+func (u *ui) popFilter(g *gocui.Gui, v *gocui.View) (err error) {
+	if u.filter == nil {
+		return
+	}
+	u.filter = nil
+	u.clearInput(u.prevline)
+	u.triggerRun()
+	return
+}
+
 func (u *ui) keybindings() (err error) {
 	binds := []struct {
 		key interface{}
@@ -97,6 +120,8 @@ func (u *ui) keybindings() (err error) {
 		{gocui.KeyArrowUp, u.selectUp},
 		{gocui.KeyCtrlP, u.selectUp},
 		{gocui.KeyEnter, u.selectLine},
+		{gocui.KeyCtrlF, u.pushFilter},
+		{gocui.KeyCtrlU, u.popFilter},
 	}
 
 	for _, b := range binds {
@@ -148,10 +173,35 @@ func (u *ui) setLayout(g *gocui.Gui) (err error) {
 	return
 }
 
-func (u *ui) getInputLine() (ret string, err error) {
-	v, err := u.gui.View("input")
+func (u *ui) clearInput(in string) (out string, err error) {
+	v, err := u.getInput()
+	if err != nil {
+		return
+	}
+	out, err = u.getInputLine()
+	if err != nil {
+		return
+	}
+
+	v.Clear()
+	fmt.Fprint(v, in)
+	v.SetCursor(len(in), 0)
+
+	return
+}
+
+func (u *ui) getInput() (ret *gocui.View, err error) {
+	ret, err = u.gui.View("input")
 	if err != nil {
 		E.Annotate(err, "Getting input view failed")
+		return
+	}
+	return
+}
+
+func (u *ui) getInputLine() (ret string, err error) {
+	v, err := u.getInput()
+	if err != nil {
 		return
 	}
 	ret, err = v.Line(0)
@@ -174,8 +224,12 @@ func (u *ui) triggerRun() (err error) {
 	if err != nil {
 		return
 	}
-	args := strings.Split(line, " ")
-	err = u.cmd.Run(args[0], args[1:]...)
+	if u.filter != nil {
+		_ = u.filter.Filter(line)
+	} else {
+		args := strings.Split(line, " ")
+		err = u.cmd.Run(args[0], args[1:]...)
+	}
 	return
 }
 

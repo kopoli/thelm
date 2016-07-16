@@ -38,12 +38,14 @@ func (b *Buffer) Filter(regex string) (err error) {
 
 	for _, line := range bytes.Split(b.data, []byte("\n")) {
 		if re.Match(line) {
-			_, err = b.Passthrough.Write(line)
+			_, err = b.Passthrough.Write(append(line, '\n'))
 			if err != nil {
 				return
 			}
 		}
 	}
+
+	b.Trigger()
 
 	return
 }
