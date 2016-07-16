@@ -33,8 +33,12 @@ func main() {
 	opts.Set("program-name", "thelm")
 	opts.Set("program-version", progVersion)
 
-	line, err := thelm.Ui(opts)
+	err := thelm.Cli(opts, os.Args)
+	if err != nil {
+		fault(err, "Parsing command line failed")
+	}
 
+	line, err := thelm.Ui(opts)
 	if err == thelm.UiAbortedErr {
 		os.Exit(1)
 	}

@@ -18,7 +18,7 @@ type ui struct {
 	progname string
 }
 
-func (u *ui)abort(g *gocui.Gui, v *gocui.View) error {
+func (u *ui) abort(g *gocui.Gui, v *gocui.View) error {
 	return UiAbortedErr
 }
 
@@ -55,7 +55,7 @@ func (u *ui) moveCursor(g *gocui.Gui, relpos int) (err error) {
 		y = minmax(0, y, maxy-1)
 	}
 
-	if y + oy > u.cmd.Out.Count {
+	if y+oy > u.cmd.Out.Count {
 		y = u.cmd.Out.Count - oy
 	}
 
@@ -79,11 +79,13 @@ func (u *ui) selectLine(g *gocui.Gui, v *gocui.View) (err error) {
 	_, oy := output.Origin()
 	_, y := output.Cursor()
 	u.line, err = output.Line(y + oy)
+	if err != nil {
+		return
+	}
 	return gocui.ErrQuit
 }
 
 func (u *ui) keybindings() (err error) {
-
 	binds := []struct {
 		key interface{}
 		f   func(*gocui.Gui, *gocui.View) error
