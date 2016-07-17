@@ -12,7 +12,8 @@ type Command struct {
 	running bool
 	wg      sync.WaitGroup
 
-	cmd *exec.Cmd
+	cmd   *exec.Cmd
+	mutex sync.Mutex
 }
 
 func (c *Command) Setup(trigger func(), out io.Writer) {
@@ -24,7 +25,9 @@ func (c *Command) Setup(trigger func(), out io.Writer) {
 
 func (c *Command) Finish() (err error) {
 	if c.running {
+		c.mutex.Lock()
 		err = c.cmd.Process.Kill()
+		c.mutex.Unlock()
 		if err != nil {
 			return
 		}
@@ -44,9 +47,11 @@ func (c *Command) Run(command string, args ...string) (err error) {
 
 		c.running = true
 
+		c.mutex.Lock()
 		c.cmd = exec.Command(command, args...)
 		c.cmd.Stdout = &c.Out
 		c.cmd.Stderr = &c.Out
+		c.mutex.Unlock()
 
 		err = c.cmd.Run()
 
