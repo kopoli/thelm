@@ -25,8 +25,9 @@ func (b *Buffer) Reset() {
 func (b *Buffer) Write(p []byte) (n int, err error) {
 	b.Count = b.Count + bytes.Count(p, []byte("\n"))
 	b.data = append(b.data, p...)
+	n, err = b.Passthrough.Write(p)
 	b.Trigger()
-	return b.Passthrough.Write(p)
+	return
 }
 
 // Filter the current Buffer with the regexp and write output to Passthrough.
