@@ -37,6 +37,11 @@ func main() {
 		fault(err, "Parsing command line failed")
 	}
 
+	err = thelm.CheckSelfRunning(opts)
+	if err != nil {
+		fault(err, "Check that program isn't running in itself failed")
+	}
+
 	line, err := thelm.Ui(opts, args)
 	if err == thelm.UiAbortedErr {
 		defval := opts.Get("default-value", "")
