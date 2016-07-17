@@ -46,7 +46,7 @@ func main() {
 	if err == thelm.UiAbortedErr {
 		defval := opts.Get("default-value", "")
 		if defval != "" {
-			fmt.Print(defval)
+			fmt.Println(defval)
 		}
 		os.Exit(1)
 	}
@@ -54,6 +54,6 @@ func main() {
 		fault(err, "Running user interface failed")
 	}
 
-	fmt.Print(line)
+	fmt.Println(line)
 	os.Exit(0)
 }
