@@ -19,6 +19,7 @@ func Cli(opts Options, argsin []string) (args []string, err error) {
 		runtime.GOOS, runtime.GOARCH))
 
 	optFilter := app.BoolOpt("filter f", false, "Start after running command")
+	optDefault := app.StringOpt("default d", "", "The default argument that will be printed out if aborted")
 
 	argArg := app.StringsArg("ARG", nil, "Command to be run")
 	app.Action = func() {
@@ -26,6 +27,8 @@ func Cli(opts Options, argsin []string) (args []string, err error) {
 		if *optFilter {
 			opts.Set("enable-filtering", "t")
 		}
+
+		opts.Set("default-value", *optDefault)
 	}
 
 	err = app.Run(argsin)

@@ -39,6 +39,10 @@ func main() {
 
 	line, err := thelm.Ui(opts, args)
 	if err == thelm.UiAbortedErr {
+		defval := opts.Get("default-value", "")
+		if defval != "" {
+			fmt.Print(defval)
+		}
 		os.Exit(1)
 	}
 	if err != nil {
