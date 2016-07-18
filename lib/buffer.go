@@ -14,15 +14,25 @@ type Buffer struct {
 	Count       int
 	Trigger     func()
 	data        []byte
+	disabled    bool
+}
+
+func (b *Buffer) DisableWriting() {
+	b.disabled = true
 }
 
 func (b *Buffer) Reset() {
 	b.Count = 0
 	b.data = []byte{}
+	b.disabled = false
 }
 
 // Write data into the buffer and through to Passthrough.
 func (b *Buffer) Write(p []byte) (n int, err error) {
+	if b.disabled {
+		return
+	}
+
 	b.Count = b.Count + bytes.Count(p, []byte("\n"))
 	b.data = append(b.data, p...)
 	n, err = b.Passthrough.Write(p)
@@ -32,6 +42,10 @@ func (b *Buffer) Write(p []byte) (n int, err error) {
 
 // Filter the current Buffer with the regexp and write output to Passthrough.
 func (b *Buffer) Filter(regex string) (err error) {
+	if b.disabled {
+		return
+	}
+
 	re, err := regexp.Compile(regex)
 	if err != nil {
 		return

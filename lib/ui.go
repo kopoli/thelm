@@ -222,6 +222,8 @@ func (u *ui) triggerRun() (err error) {
 		E.Annotate(err, "Getting output view failed")
 		return
 	}
+
+	u.cmd.Finish()
 	output.Clear()
 	output.SetCursor(0, 0)
 	line, err := u.getInputLine()

@@ -26,6 +26,7 @@ func (c *Command) Setup(trigger func(), out io.Writer) {
 func (c *Command) Finish() (err error) {
 	if c.running {
 		c.mutex.Lock()
+		c.Out.DisableWriting()
 		err = c.cmd.Process.Kill()
 		c.mutex.Unlock()
 		if err != nil {
