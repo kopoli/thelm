@@ -237,10 +237,6 @@ func (u *ui) triggerRun() (err error) {
 	// Ignore error if input line cannot be read
 	line, _ := u.getInputLine()
 
-	if u.relaxedRe {
-		line = AsRelaxedRegexp(line)
-	}
-
 	if u.filter != nil {
 		_ = u.filter.Filter(line)
 	} else {
@@ -248,11 +244,17 @@ func (u *ui) triggerRun() (err error) {
 		if u.hideInitialArgs {
 			args = append(args, u.args...)
 		}
+
+		if u.relaxedRe {
+			line = AsRelaxedRegexp(line)
+		}
+
 		if u.singleArg {
 			args = append(args, line)
 		} else {
 			args = append(args, strings.Split(line, " ")...)
 		}
+
 		err = u.cmd.Run(args[0], args[1:]...)
 		if err != nil {
 			err = E.Annotate(err, "Running command failed")

@@ -46,7 +46,7 @@ func (b *Buffer) Filter(regex string) (err error) {
 		return
 	}
 
-	re, err := regexp.Compile(regex)
+	re, err := regexp.Compile("(?i)" + AsRelaxedRegexp(regex))
 	if err != nil {
 		return
 	}

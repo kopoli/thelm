@@ -22,7 +22,7 @@ func Cli(opts Options, argsin []string) (args []string, err error) {
 	optDefault := app.StringOpt("default d", "", "The default argument that will be printed out if aborted.")
 	optHide := app.BoolOpt("hide-initial i", false, "Hide command given at the command line.")
 	optSingleArg := app.BoolOpt("single-arg s", false, "Regard input given in the UI as a single argument to the program.")
-	optRelaxedRe := app.BoolOpt("relaxed-regexp r", true, "Regard input as a relaxed regexp. Implies --single-arg.")
+	optRelaxedRe := app.BoolOpt("relaxed-regexp r", false, "Regard input as a relaxed regexp. Implies --single-arg.")
 	optTitle := app.StringOpt("title t", progName, "Title string in UI.")
 
 	argArg := app.StringsArg("ARG", nil, "Command to be run")

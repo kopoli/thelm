@@ -2,10 +2,9 @@ package thelm
 
 import "regexp"
 
-// AsRelaxedRegexp converts spaces in a string to .* and makes it case
-// insensitive regexp
+// AsRelaxedRegexp converts spaces in a string to .*
 func AsRelaxedRegexp(regex string) (ret string) {
 	re := regexp.MustCompile("  *")
-	ret = "(?i)" + re.ReplaceAllString(regex, ".*")
+	ret = re.ReplaceAllString(regex, ".*")
 	return
 }
