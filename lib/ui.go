@@ -11,12 +11,16 @@ import (
 var UiAbortedErr = E.New("User interface was aborted")
 
 type ui struct {
-	args []string
+	args            []string
+	hideInitialArgs bool
+	singleArg       bool
+	relaxedRe       bool
+
 	cmd  Command
 	gui  *gocui.Gui
 	line string
 
-	progname string
+	inputTitle string
 
 	filter   *Buffer
 	prevline string
@@ -149,7 +153,7 @@ func (u *ui) setLayout(g *gocui.Gui) (err error) {
 				if u.filter != nil {
 					filtering = " - filtering"
 				}
-				inp.Title = fmt.Sprintf("%s%s - %d", u.progname,
+				inp.Title = fmt.Sprintf("%s%s - %d", u.inputTitle,
 					filtering, u.cmd.Out.Count)
 				return
 			})
@@ -162,12 +166,15 @@ func (u *ui) setLayout(g *gocui.Gui) (err error) {
 	v, err = g.SetView("input", -1, maxy-2, maxx, maxy)
 	if err == gocui.ErrUnknownView {
 		v.Editable = true
-		v.Title = u.progname
+		v.Title = u.inputTitle
 		v.Wrap = true
 		err = nil
-		initial := strings.Join(u.args, " ")
-		fmt.Fprint(v, initial)
-		v.SetCursor(len(initial), 0)
+
+		if !u.hideInitialArgs {
+			initial := strings.Join(u.args, " ")
+			fmt.Fprint(v, initial)
+			v.SetCursor(len(initial), 0)
+		}
 		g.SetCurrentView("input")
 	}
 	if err != nil {
@@ -197,7 +204,7 @@ func (u *ui) clearInput(in string) (out string, err error) {
 func (u *ui) getInput() (ret *gocui.View, err error) {
 	ret, err = u.gui.View("input")
 	if err != nil {
-		E.Annotate(err, "Getting input view failed")
+		err = E.Annotate(err, "Getting input view failed")
 		return
 	}
 	return
@@ -210,7 +217,7 @@ func (u *ui) getInputLine() (ret string, err error) {
 	}
 	ret, err = v.Line(0)
 	if err != nil {
-		E.Annotate(err, "Getting first input line failed")
+		err = E.Annotate(err, "Getting first input line failed")
 		return
 	}
 	return
@@ -219,22 +226,37 @@ func (u *ui) getInputLine() (ret string, err error) {
 func (u *ui) triggerRun() (err error) {
 	output, err := u.gui.View("output")
 	if err != nil {
-		E.Annotate(err, "Getting output view failed")
+		err = E.Annotate(err, "Getting output view failed")
 		return
 	}
 
 	u.cmd.Finish()
 	output.Clear()
 	output.SetCursor(0, 0)
-	line, err := u.getInputLine()
-	if err != nil {
-		return
+
+	// Ignore error if input line cannot be read
+	line, _ := u.getInputLine()
+
+	if u.relaxedRe {
+		line = AsRelaxedRegexp(line)
 	}
+
 	if u.filter != nil {
 		_ = u.filter.Filter(line)
 	} else {
-		args := strings.Split(line, " ")
+		args := make([]string, 0)
+		if u.hideInitialArgs {
+			args = append(args, u.args...)
+		}
+		if u.singleArg {
+			args = append(args, line)
+		} else {
+			args = append(args, strings.Split(line, " ")...)
+		}
 		err = u.cmd.Run(args[0], args[1:]...)
+		if err != nil {
+			err = E.Annotate(err, "Running command failed")
+		}
 	}
 	return
 }
@@ -271,7 +293,11 @@ func (u *ui) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 func Ui(opts Options, args []string) (ret string, err error) {
 
 	var UI ui
-	UI.progname = opts.Get("program-name", "thelm")
+	UI.inputTitle = opts.Get("input-title", "thelm")
+	UI.hideInitialArgs = opts.IsSet("hide-initial-args")
+	UI.singleArg = opts.IsSet("single-argument")
+	UI.relaxedRe = opts.IsSet("relaxed-regexp")
+
 	UI.args = args
 
 	UI.gui = gocui.NewGui()
@@ -295,12 +321,15 @@ func Ui(opts Options, args []string) (ret string, err error) {
 		return
 	}
 
-	UI.gui.Execute(func(g *gocui.Gui) error {
-		UI.triggerRun()
-		if opts.Get("enable-filtering", "") != "" {
+	UI.gui.Execute(func(g *gocui.Gui) (err error) {
+		err = UI.triggerRun()
+		if err != nil {
+			err = E.Annotate(err, "Initial run failed")
+		}
+		if opts.IsSet("enable-filtering") {
 			UI.pushFilter(nil, nil)
 		}
-		return nil
+		return
 	})
 
 	err = UI.gui.MainLoop()
