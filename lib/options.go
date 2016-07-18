@@ -6,6 +6,7 @@ import "sync"
 type Options interface {
 	Set(key string, value string)
 	Get(key string, fallback string) string
+	IsSet(key string) bool
 }
 
 // GetOptions gets the static options structure
@@ -40,4 +41,12 @@ func (o *optionMap) Get(key string, fallback string) string {
 	o.mutex.Unlock()
 
 	return ret
+}
+
+// IsSet returns true if the key has been set
+func (o *optionMap) IsSet(key string) (ret bool) {
+	o.mutex.Lock()
+	_, ret = o.values[key]
+	o.mutex.Unlock()
+	return
 }
