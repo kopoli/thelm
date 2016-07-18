@@ -263,6 +263,24 @@ func (u *ui) triggerRun() (err error) {
 	return
 }
 
+func (u *ui) killWord(v *gocui.View) (err error) {
+	line, err := u.getInputLine()
+	if err != nil {
+		return
+	}
+
+	lastspace := strings.LastIndex(line, " ")
+	if lastspace < 0 {
+		lastspace = 0
+	}
+
+	for i := 0; i < len(line)-lastspace; i++ {
+		v.EditDelete(true)
+	}
+
+	return
+}
+
 // Edit implements the gocui.Editor interface. It is a single line editor.
 func (u *ui) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 	switch {
@@ -274,6 +292,10 @@ func (u *ui) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 		}
 	case ch != 0 && mod == 0:
 		v.EditWrite(ch)
+		u.triggerRun()
+	case (mod == gocui.ModAlt && (key == gocui.KeyBackspace || key == gocui.KeyBackspace2)) ||
+		key == gocui.KeyCtrlW:
+		u.killWord(v)
 		u.triggerRun()
 	case key == gocui.KeyBackspace || key == gocui.KeyBackspace2:
 		v.EditDelete(true)
