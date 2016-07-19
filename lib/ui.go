@@ -334,8 +334,8 @@ func Ui(opts Options, args []string) (ret string, err error) {
 	defer UI.cmd.Finish()
 
 	UI.gui.Editor = &UI
-	UI.gui.SelBgColor = gocui.ColorGreen
-	UI.gui.SelFgColor = gocui.ColorBlack
+	UI.gui.SelBgColor = gocui.AttrReverse
+	UI.gui.SelFgColor = gocui.AttrBold
 	UI.gui.Cursor = true
 
 	UI.gui.SetLayout(UI.setLayout)
