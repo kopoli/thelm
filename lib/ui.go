@@ -332,7 +332,7 @@ func Ui(opts Options, args []string) (ret string, err error) {
 	UI.gui = gocui.NewGui()
 	err = UI.gui.Init()
 	if err != nil {
-		E.Annotate(err, "Initializing UI library failed")
+		err = E.Annotate(err, "Initializing UI library failed")
 		return
 	}
 	defer UI.gui.Close()
@@ -346,7 +346,7 @@ func Ui(opts Options, args []string) (ret string, err error) {
 	UI.gui.SetLayout(UI.setLayout)
 	err = UI.keybindings()
 	if err != nil {
-		E.Annotate(err, "Setting keybindings failed")
+		err = E.Annotate(err, "Setting keybindings failed")
 		return
 	}
 
@@ -370,7 +370,7 @@ func Ui(opts Options, args []string) (ret string, err error) {
 		return
 	}
 	if err != nil {
-		E.Annotate(err, "Running UI main loop failed")
+		err = E.Annotate(err, "Running UI main loop failed")
 	}
 
 	return
