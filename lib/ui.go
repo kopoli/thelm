@@ -263,18 +263,23 @@ func (u *ui) triggerRun() (err error) {
 	return
 }
 
-func (u *ui) killWord(v *gocui.View) (err error) {
+func (u *ui) backwardKillWord(v *gocui.View) (err error) {
 	line, err := u.getInputLine()
 	if err != nil {
 		return
 	}
 
-	lastspace := strings.LastIndex(line, " ")
+	pos, _ := v.Cursor()
+	if pos > len(line) {
+		return E.New("Internal error: position larger than input line")
+	}
+
+	lastspace := strings.LastIndex(line[:pos], " ")
 	if lastspace < 0 {
 		lastspace = 0
 	}
 
-	for i := 0; i < len(line)-lastspace; i++ {
+	for i := 0; i < pos-lastspace; i++ {
 		v.EditDelete(true)
 	}
 
@@ -295,7 +300,7 @@ func (u *ui) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 		u.triggerRun()
 	case (mod == gocui.ModAlt && (key == gocui.KeyBackspace || key == gocui.KeyBackspace2)) ||
 		key == gocui.KeyCtrlW:
-		u.killWord(v)
+		u.backwardKillWord(v)
 		u.triggerRun()
 	case key == gocui.KeyBackspace || key == gocui.KeyBackspace2:
 		v.EditDelete(true)
