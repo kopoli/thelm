@@ -1,7 +1,6 @@
 package thelm
 
 import (
-	"io"
 	"os/exec"
 	"sync"
 )
@@ -14,13 +13,6 @@ type Command struct {
 
 	cmd   *exec.Cmd
 	mutex sync.Mutex
-}
-
-func (c *Command) Setup(trigger func(), out io.Writer) {
-	c.Out = Buffer{
-		Trigger:     trigger,
-		Passthrough: out,
-	}
 }
 
 func (c *Command) Finish() (err error) {

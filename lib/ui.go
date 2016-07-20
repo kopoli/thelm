@@ -146,18 +146,28 @@ func (u *ui) setLayout(g *gocui.Gui) (err error) {
 		v.Highlight = true
 		err = nil
 
-		u.cmd.Setup(func() {
-			g.Execute(func(g *gocui.Gui) (err error) {
-				inp, err := g.View("input")
-				filtering := ""
-				if u.filter != nil {
-					filtering = " - filtering"
-				}
-				inp.Title = fmt.Sprintf("%s%s - %d", u.inputTitle,
-					filtering, u.cmd.Out.Count)
-				return
-			})
-		}, v)
+		u.cmd.Out = Buffer{
+			Passthrough: v,
+			AfterWrite: func() {
+				g.Execute(func(g *gocui.Gui) (err error) {
+					inp, err := g.View("input")
+					filtering := ""
+					if u.filter != nil {
+						filtering = " - filtering"
+					}
+					inp.Title = fmt.Sprintf("%s%s - %d",
+						u.inputTitle, filtering,
+						u.cmd.Out.Count)
+					return
+				})
+			},
+			OnStart: func() error {
+				out, err := g.View("output")
+				out.Clear()
+				out.SetCursor(0, 0)
+				return err
+			},
+		}
 	}
 	if err != nil {
 		return
@@ -173,9 +183,9 @@ func (u *ui) setLayout(g *gocui.Gui) (err error) {
 		if !u.hideInitialArgs {
 			initial := strings.Join(u.args, " ")
 			fmt.Fprint(v, initial)
-			v.SetCursor(len(initial), 0)
+			_ = v.SetCursor(len(initial), 0)
 		}
-		g.SetCurrentView("input")
+		_ = g.SetCurrentView("input")
 	}
 	if err != nil {
 		return
@@ -196,7 +206,7 @@ func (u *ui) clearInput(in string) (out string, err error) {
 
 	v.Clear()
 	fmt.Fprint(v, in)
-	v.SetCursor(len(in), 0)
+	_ = v.SetCursor(len(in), 0)
 
 	return
 }
@@ -224,23 +234,13 @@ func (u *ui) getInputLine() (ret string, err error) {
 }
 
 func (u *ui) triggerRun() (err error) {
-	output, err := u.gui.View("output")
-	if err != nil {
-		err = E.Annotate(err, "Getting output view failed")
-		return
-	}
-
-	u.cmd.Finish()
-	output.Clear()
-	output.SetCursor(0, 0)
-
 	// Ignore error if input line cannot be read
 	line, _ := u.getInputLine()
 
 	if u.filter != nil {
 		_ = u.filter.Filter(line)
 	} else {
-		args := make([]string, 0)
+		var args []string
 		if u.hideInitialArgs {
 			args = append(args, u.args...)
 		}

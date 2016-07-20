@@ -12,7 +12,8 @@ import (
 type Buffer struct {
 	Passthrough io.Writer
 	Count       int
-	Trigger     func()
+	AfterWrite  func()
+	OnStart     func() error
 	data        []byte
 	disabled    bool
 }
@@ -22,6 +23,8 @@ func (b *Buffer) DisableWriting() {
 }
 
 func (b *Buffer) Reset() {
+	b.OnStart()
+
 	b.Count = 0
 	b.data = []byte{}
 	b.disabled = false
@@ -36,7 +39,7 @@ func (b *Buffer) Write(p []byte) (n int, err error) {
 	b.Count = b.Count + bytes.Count(p, []byte("\n"))
 	b.data = append(b.data, p...)
 	n, err = b.Passthrough.Write(p)
-	b.Trigger()
+	b.AfterWrite()
 	return
 }
 
@@ -51,16 +54,18 @@ func (b *Buffer) Filter(regex string) (err error) {
 		return
 	}
 
+	b.OnStart()
+
 	for _, line := range bytes.Split(b.data, []byte("\n")) {
 		if re.Match(line) {
 			_, err = b.Passthrough.Write(append(line, '\n'))
 			if err != nil {
 				return
 			}
+			b.AfterWrite()
 		}
 	}
 
-	b.Trigger()
 
 	return
 }
