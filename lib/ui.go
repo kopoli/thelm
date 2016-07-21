@@ -106,6 +106,8 @@ func (u *ui) popFilter(g *gocui.Gui, v *gocui.View) (err error) {
 		return
 	}
 	u.filter = nil
+
+	u.cmd.Out.RestoreFiltering()
 	u.clearInput(u.prevline)
 	u.triggerRun()
 	return

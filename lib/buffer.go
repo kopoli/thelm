@@ -36,7 +36,7 @@ func (b *Buffer) Write(p []byte) (n int, err error) {
 		return
 	}
 
-	b.Count = b.Count + bytes.Count(p, []byte("\n"))
+	b.Count += bytes.Count(p, []byte("\n"))
 	b.data = append(b.data, p...)
 	n, err = b.Passthrough.Write(p)
 	b.AfterWrite()
@@ -55,9 +55,11 @@ func (b *Buffer) Filter(regex string) (err error) {
 	}
 
 	b.OnStart()
+	b.Count = 0
 
 	for _, line := range bytes.Split(b.data, []byte("\n")) {
 		if re.Match(line) {
+			b.Count += 1
 			_, err = b.Passthrough.Write(append(line, '\n'))
 			if err != nil {
 				return
@@ -66,6 +68,9 @@ func (b *Buffer) Filter(regex string) (err error) {
 		}
 	}
 
-
 	return
+}
+
+func (b *Buffer) RestoreFiltering() {
+	b.Count = len(b.data)
 }
