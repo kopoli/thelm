@@ -51,7 +51,7 @@ func (u *ui) moveCursor(g *gocui.Gui, relpos int) (err error) {
 	oy = oy + relpos
 	y = y + relpos
 	if oy > u.cmd.Out.Count {
-		oy = u.cmd.Out.Count
+		oy = u.cmd.Out.Count - 1
 	}
 	if y < 0 || y >= maxy {
 		if oy >= 0 {
@@ -71,12 +71,31 @@ func (u *ui) moveCursor(g *gocui.Gui, relpos int) (err error) {
 	return
 }
 
+func (u *ui) moveCursorPage(g *gocui.Gui, relpage int) (err error) {
+	out, err := g.View("output")
+	if err != nil {
+		return
+	}
+
+	_, maxy := out.Size()
+
+	return u.moveCursor(g, maxy * relpage)
+}
+
 func (u *ui) selectUp(g *gocui.Gui, v *gocui.View) error {
 	return u.moveCursor(g, -1)
 }
 
 func (u *ui) selectDown(g *gocui.Gui, v *gocui.View) error {
 	return u.moveCursor(g, 1)
+}
+
+func (u *ui) selectPgUp(g *gocui.Gui, v *gocui.View) error {
+	return u.moveCursorPage(g, -1)
+}
+
+func (u *ui) selectPgDown(g *gocui.Gui, v *gocui.View) error {
+	return u.moveCursorPage(g, 1)
 }
 
 func (u *ui) selectLine(g *gocui.Gui, v *gocui.View) (err error) {
@@ -124,6 +143,8 @@ func (u *ui) keybindings() (err error) {
 		{gocui.KeyCtrlN, u.selectDown},
 		{gocui.KeyArrowUp, u.selectUp},
 		{gocui.KeyCtrlP, u.selectUp},
+		{gocui.KeyPgup, u.selectPgUp},
+		{gocui.KeyPgdn, u.selectPgDown},
 		{gocui.KeyEnter, u.selectLine},
 		{gocui.KeyCtrlF, u.pushFilter},
 		{gocui.KeyCtrlU, u.popFilter},
