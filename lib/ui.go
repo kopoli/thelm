@@ -86,10 +86,9 @@ func (u *ui) selectLine(g *gocui.Gui, v *gocui.View) (err error) {
 	}
 	_, oy := output.Origin()
 	_, y := output.Cursor()
-	u.line, err = output.Line(y + oy)
-	if err != nil {
-		return
-	}
+
+	// Ignore error. If this errors out, just an empty string is returned
+	u.line, _ = output.Line(y + oy)
 	return gocui.ErrQuit
 }
 
