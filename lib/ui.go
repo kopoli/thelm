@@ -15,6 +15,7 @@ type ui struct {
 	hideInitialArgs bool
 	singleArg       bool
 	relaxedRe       bool
+	showDebug       bool
 
 	cmd  Command
 	gui  *gocui.Gui
@@ -98,6 +99,25 @@ func (u *ui) selectPgDown(g *gocui.Gui, v *gocui.View) error {
 	return u.moveCursorPage(g, 1)
 }
 
+func (u *ui) toggleDebug(g *gocui.Gui, v *gocui.View) (err error) {
+	u.showDebug = !u.showDebug
+	if u.showDebug {
+		g.SetViewOnTop("debug")
+	} else {
+		g.SetViewOnTop("output")
+		g.SetViewOnTop("input")
+	}
+	return
+}
+
+func (u *ui) printDebug(arg ...interface{}) {
+	d, err := u.gui.View("debug")
+	if err != nil {
+		return
+	}
+	fmt.Fprintln(d, arg...)
+}
+
 func (u *ui) selectLine(g *gocui.Gui, v *gocui.View) (err error) {
 	output, err := g.View("output")
 	if err != nil {
@@ -138,6 +158,7 @@ func (u *ui) keybindings() (err error) {
 		f   func(*gocui.Gui, *gocui.View) error
 	}{
 		{gocui.KeyCtrlG, u.abort},
+		{gocui.KeyF12, u.toggleDebug},
 		{gocui.KeyCtrlC, u.abort},
 		{gocui.KeyArrowDown, u.selectDown},
 		{gocui.KeyCtrlN, u.selectDown},
@@ -163,7 +184,17 @@ func (u *ui) keybindings() (err error) {
 func (u *ui) setLayout(g *gocui.Gui) (err error) {
 	maxx, maxy := g.Size()
 
-	v, err := g.SetView("output", -1, -1, maxx, maxy-2)
+	v, err := g.SetView("debug", maxx*10/100, maxy*10/100, maxx-maxx*10/100, maxy-maxy*10/100)
+	if err == gocui.ErrUnknownView {
+		err = nil
+
+		fmt.Fprintln(v, "Debug log:")
+	}
+	if err != nil {
+		return
+	}
+
+	v, err = g.SetView("output", -1, -1, maxx, maxy-2)
 	if err == gocui.ErrUnknownView {
 		v.Highlight = true
 		err = nil
