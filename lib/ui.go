@@ -31,6 +31,11 @@ func (u *ui) abort(g *gocui.Gui, v *gocui.View) error {
 	return UiAbortedErr
 }
 
+func (u *ui) clearInputLine(g *gocui.Gui, v *gocui.View) (err error) {
+	_, _ = u.clearInput("")
+	return
+}
+
 func minmax(low int, value int, high int) int {
 	if value < low {
 		return low
@@ -80,7 +85,7 @@ func (u *ui) moveCursorPage(g *gocui.Gui, relpage int) (err error) {
 
 	_, maxy := out.Size()
 
-	return u.moveCursor(g, maxy * relpage)
+	return u.moveCursor(g, maxy*relpage)
 }
 
 func (u *ui) selectUp(g *gocui.Gui, v *gocui.View) error {
@@ -131,24 +136,21 @@ func (u *ui) selectLine(g *gocui.Gui, v *gocui.View) (err error) {
 	return gocui.ErrQuit
 }
 
-func (u *ui) pushFilter(g *gocui.Gui, v *gocui.View) (err error) {
+func (u *ui) toggleFilter(g *gocui.Gui, v *gocui.View) (err error) {
+	u.printDebug("Filtering")
+	u.printDebug(u.filter)
 	if u.filter != nil {
-		return
-	}
-	u.filter = &u.cmd.Out
-	u.prevline, err = u.clearInput("")
-	return
-}
+		u.filter = nil
 
-func (u *ui) popFilter(g *gocui.Gui, v *gocui.View) (err error) {
-	if u.filter == nil {
-		return
-	}
-	u.filter = nil
+		u.cmd.Out.RestoreFiltering()
+		u.clearInput(u.prevline)
+		u.triggerRun()
+	} else {
+		u.filter = &u.cmd.Out
 
-	u.cmd.Out.RestoreFiltering()
-	u.clearInput(u.prevline)
-	u.triggerRun()
+		u.prevline, err = u.clearInput("")
+	}
+
 	return
 }
 
@@ -167,8 +169,8 @@ func (u *ui) keybindings() (err error) {
 		{gocui.KeyPgup, u.selectPgUp},
 		{gocui.KeyPgdn, u.selectPgDown},
 		{gocui.KeyEnter, u.selectLine},
-		{gocui.KeyCtrlF, u.pushFilter},
-		{gocui.KeyCtrlU, u.popFilter},
+		{gocui.KeyCtrlF, u.toggleFilter},
+		{gocui.KeyCtrlU, u.clearInputLine},
 	}
 
 	for _, b := range binds {
@@ -409,7 +411,7 @@ func Ui(opts Options, args []string) (ret string, err error) {
 			err = E.Annotate(err, "Initial run failed")
 		}
 		if opts.IsSet("enable-filtering") {
-			UI.pushFilter(nil, nil)
+			UI.toggleFilter(nil, nil)
 		}
 		return
 	})
