@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"regexp"
+	"sync"
 )
 
 // Buffer stores data written to it through its io.Writer. It also writes the
@@ -15,7 +16,9 @@ type Buffer struct {
 	AfterWrite  func()
 	OnStart     func() error
 	data        []byte
+	pos         int
 	disabled    bool
+	mutex       sync.Mutex
 }
 
 func (b *Buffer) DisableWriting() {
@@ -27,7 +30,16 @@ func (b *Buffer) Reset() {
 
 	b.Count = 0
 	b.data = []byte{}
+	b.pos = 0
 	b.disabled = false
+}
+
+func (b *Buffer) Sync() (err error) {
+	b.mutex.Lock()
+	_, err = b.Passthrough.Write(b.data[b.pos:len(b.data)])
+	b.pos = len(b.data)
+	b.mutex.Unlock()
+	return
 }
 
 // Write data into the buffer and through to Passthrough.
@@ -37,8 +49,10 @@ func (b *Buffer) Write(p []byte) (n int, err error) {
 	}
 
 	b.Count += bytes.Count(p, []byte("\n"))
+	b.mutex.Lock()
 	b.data = append(b.data, p...)
-	n, err = b.Passthrough.Write(p)
+	n = len(p)
+	b.mutex.Unlock()
 	b.AfterWrite()
 	return
 }

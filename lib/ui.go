@@ -205,6 +205,7 @@ func (u *ui) setLayout(g *gocui.Gui) (err error) {
 			Passthrough: v,
 			AfterWrite: func() {
 				g.Execute(func(g *gocui.Gui) (err error) {
+					u.cmd.Out.Sync()
 					inp, err := g.View("input")
 					filtering := ""
 					if u.filter != nil {
