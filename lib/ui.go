@@ -1,6 +1,7 @@
 package thelm
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -10,6 +11,11 @@ import (
 // UiAbortedErr tells if user wanted to abort
 var UiAbortedErr = E.New("User interface was aborted")
 
+type filter struct {
+	buf Buffer
+	input string
+}
+
 type ui struct {
 	args            []string
 	hideInitialArgs bool
@@ -17,14 +23,14 @@ type ui struct {
 	relaxedRe       bool
 	showDebug       bool
 
-	cmd  Command
-	gui  *gocui.Gui
-	line string
+	cmd   Command
+	gui   *gocui.Gui
+	line  string
+	lines int
 
 	inputTitle string
 
-	filter   *Buffer
-	prevline string
+	filter *filter
 }
 
 func (u *ui) abort(g *gocui.Gui, v *gocui.View) error {
@@ -56,8 +62,8 @@ func (u *ui) moveCursor(g *gocui.Gui, relpos int) (err error) {
 
 	oy = oy + relpos
 	y = y + relpos
-	if oy > u.cmd.Out.Count {
-		oy = u.cmd.Out.Count - 1
+	if oy > u.lines {
+		oy = u.lines - 1
 	}
 	if y < 0 || y >= maxy {
 		if oy >= 0 {
@@ -69,8 +75,8 @@ func (u *ui) moveCursor(g *gocui.Gui, relpos int) (err error) {
 		y = minmax(0, y, maxy-1)
 	}
 
-	if y+oy > u.cmd.Out.Count {
-		y = u.cmd.Out.Count - oy
+	if y+oy > u.lines {
+		y = u.lines - oy
 	}
 
 	err = v.SetCursor(x, y)
@@ -137,18 +143,25 @@ func (u *ui) selectLine(g *gocui.Gui, v *gocui.View) (err error) {
 }
 
 func (u *ui) toggleFilter(g *gocui.Gui, v *gocui.View) (err error) {
+	output, err := g.View("output")
+	if err != nil {
+		return
+	}
+
 	u.printDebug("Filtering")
 	u.printDebug(u.filter)
 	if u.filter != nil {
+		u.filter.buf.Pop(output)
+		u.clearInput(u.filter.input)
+		u.lines = 0
 		u.filter = nil
 
-		u.cmd.Out.RestoreFiltering()
-		u.clearInput(u.prevline)
 		u.triggerRun()
 	} else {
-		u.filter = &u.cmd.Out
-
-		u.prevline, err = u.clearInput("")
+		u.filter = &filter{}
+		u.filter.buf.Sync = u.Sync
+		u.filter.buf.Push(output.Buffer())
+		u.filter.input, err = u.clearInput("")
 	}
 
 	return
@@ -183,6 +196,24 @@ func (u *ui) keybindings() (err error) {
 	return
 }
 
+func (u *ui) Sync(p []byte) (err error) {
+	u.gui.Execute(func(g *gocui.Gui) (err error) {
+		out, err := g.View("output")
+		_, err = out.Write(p)
+		u.lines += bytes.Count(p, []byte("\n"))
+		inp, err := g.View("input")
+		filtering := ""
+		if u.filter != nil {
+			filtering = " - filtering"
+		}
+		inp.Title = fmt.Sprintf("%s%s - %d",
+			u.inputTitle, filtering,
+			u.lines)
+		return
+	})
+	return
+}
+
 func (u *ui) setLayout(g *gocui.Gui) (err error) {
 	maxx, maxy := g.Size()
 
@@ -201,29 +232,7 @@ func (u *ui) setLayout(g *gocui.Gui) (err error) {
 		v.Highlight = true
 		err = nil
 
-		u.cmd.Out = Buffer{
-			Passthrough: v,
-			AfterWrite: func() {
-				g.Execute(func(g *gocui.Gui) (err error) {
-					u.cmd.Out.Sync()
-					inp, err := g.View("input")
-					filtering := ""
-					if u.filter != nil {
-						filtering = " - filtering"
-					}
-					inp.Title = fmt.Sprintf("%s%s - %d",
-						u.inputTitle, filtering,
-						u.cmd.Out.Count)
-					return
-				})
-			},
-			OnStart: func() error {
-				out, err := g.View("output")
-				out.Clear()
-				out.SetCursor(0, 0)
-				return err
-			},
-		}
+		u.cmd.Sync = u.Sync
 	}
 	if err != nil {
 		return
@@ -267,6 +276,14 @@ func (u *ui) clearInput(in string) (out string, err error) {
 	return
 }
 
+func (u *ui) clearOutput() (err error) {
+	out, err := u.gui.View("output")
+	out.Clear()
+	out.SetCursor(0, 0)
+	u.lines = 0
+	return
+}
+
 func (u *ui) getInput() (ret *gocui.View, err error) {
 	ret, err = u.gui.View("input")
 	if err != nil {
@@ -292,9 +309,10 @@ func (u *ui) getInputLine() (ret string, err error) {
 func (u *ui) triggerRun() (err error) {
 	// Ignore error if input line cannot be read
 	line, _ := u.getInputLine()
+	u.clearOutput()
 
 	if u.filter != nil {
-		_ = u.filter.Filter(line)
+		_, _ = u.filter.buf.Filter(line)
 	} else {
 		var args []string
 		if u.hideInitialArgs {

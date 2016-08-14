@@ -6,12 +6,21 @@ import (
 )
 
 type Command struct {
-	Out Buffer
-
 	cmd   *exec.Cmd
 	mutex sync.Mutex
+
+	// Callback that provides data out
+	Sync func([]byte) error
 }
 
+// Data will be written to the internal buffer from another process
+func (c *Command) Write(p []byte) (n int, err error) {
+	n = len(p)
+	c.Sync(p)
+	return
+}
+
+// Finish makes sure the process has stopped
 func (c *Command) Finish() (err error) {
 	c.mutex.Lock()
 	if c.cmd != nil {
@@ -21,9 +30,9 @@ func (c *Command) Finish() (err error) {
 	return
 }
 
+// Run given cocmmand with args
 func (c *Command) Run(command string, args ...string) (err error) {
 	c.Finish()
-	c.Out.Reset()
 
 	if command == "" {
 		return
@@ -31,11 +40,12 @@ func (c *Command) Run(command string, args ...string) (err error) {
 
 	c.mutex.Lock()
 	c.cmd = exec.Command(command, args...)
-	c.cmd.Stdout = &c.Out
-	c.cmd.Stderr = &c.Out
+	c.cmd.Stdout = c
+	c.cmd.Stderr = c
 	err = c.cmd.Start()
 	if err != nil {
 		c.cmd = nil
+		c.Sync([]byte{})
 	}
 	c.mutex.Unlock()
 

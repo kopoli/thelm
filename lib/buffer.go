@@ -4,87 +4,42 @@ import (
 	"bytes"
 	"io"
 	"regexp"
-	"sync"
 )
 
-// Buffer stores data written to it through its io.Writer. It also writes the
-// data to Passthrough. Each time Write is called it counts the lines to Count
-// and runs the Trigger function
 type Buffer struct {
-	Passthrough io.Writer
-	Count       int
-	AfterWrite  func()
-	OnStart     func() error
-	data        []byte
-	pos         int
-	disabled    bool
-	mutex       sync.Mutex
+	data []byte
+
+	// Callback that provides data out
+	Sync func([]byte) error
 }
 
-func (b *Buffer) DisableWriting() {
-	b.disabled = true
+func (b *Buffer) Push(data string) {
+	b.data = []byte(data)
 }
 
-func (b *Buffer) Reset() {
-	b.OnStart()
-
-	b.Count = 0
-	b.data = []byte{}
-	b.pos = 0
-	b.disabled = false
-}
-
-func (b *Buffer) Sync() (err error) {
-	b.mutex.Lock()
-	_, err = b.Passthrough.Write(b.data[b.pos:len(b.data)])
-	b.pos = len(b.data)
-	b.mutex.Unlock()
+func (b *Buffer) Pop(out io.Writer) (err error) {
+	_, err = out.Write(b.data)
 	return
 }
 
-// Write data into the buffer and through to Passthrough.
-func (b *Buffer) Write(p []byte) (n int, err error) {
-	if b.disabled {
-		return
-	}
-
-	b.Count += bytes.Count(p, []byte("\n"))
-	b.mutex.Lock()
-	b.data = append(b.data, p...)
-	n = len(p)
-	b.mutex.Unlock()
-	b.AfterWrite()
-	return
-}
-
-// Filter the current Buffer with the regexp and write output to Passthrough.
-func (b *Buffer) Filter(regex string) (err error) {
-	if b.disabled {
-		return
-	}
-
+// Filter the current Buffer with the regexp and write output to out.
+func (b *Buffer) Filter(regex string) (lines int, err error) {
 	re, err := regexp.Compile("(?i)" + AsRelaxedRegexp(regex))
 	if err != nil {
 		return
 	}
 
-	b.OnStart()
-	b.Count = 0
-
+	//TODO Splitting can be done in the Push phase
 	for _, line := range bytes.Split(b.data, []byte("\n")) {
 		if re.Match(line) {
-			b.Count += 1
-			_, err = b.Passthrough.Write(append(line, '\n'))
+			lines += 1
+			// _, err = out.Write(append(line, '\n'))
+			err = b.Sync(append(line, '\n'))
 			if err != nil {
 				return
 			}
-			b.AfterWrite()
 		}
 	}
 
 	return
-}
-
-func (b *Buffer) RestoreFiltering() {
-	b.Count = len(b.data)
 }
