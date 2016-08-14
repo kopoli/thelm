@@ -33,11 +33,11 @@ type ui struct {
 	filter *filter
 }
 
-func (u *ui) abort(g *gocui.Gui, v *gocui.View) error {
+func (u *ui) cmdAbort(g *gocui.Gui, v *gocui.View) error {
 	return UiAbortedErr
 }
 
-func (u *ui) clearInputLine(g *gocui.Gui, v *gocui.View) (err error) {
+func (u *ui) cmdClearInputLine(g *gocui.Gui, v *gocui.View) (err error) {
 	_, _ = u.clearInput("")
 	return
 }
@@ -94,23 +94,23 @@ func (u *ui) moveCursorPage(g *gocui.Gui, relpage int) (err error) {
 	return u.moveCursor(g, maxy*relpage)
 }
 
-func (u *ui) selectUp(g *gocui.Gui, v *gocui.View) error {
+func (u *ui) cmdSelectUp(g *gocui.Gui, v *gocui.View) error {
 	return u.moveCursor(g, -1)
 }
 
-func (u *ui) selectDown(g *gocui.Gui, v *gocui.View) error {
+func (u *ui) cmdSelectDown(g *gocui.Gui, v *gocui.View) error {
 	return u.moveCursor(g, 1)
 }
 
-func (u *ui) selectPgUp(g *gocui.Gui, v *gocui.View) error {
+func (u *ui) cmdSelectPgUp(g *gocui.Gui, v *gocui.View) error {
 	return u.moveCursorPage(g, -1)
 }
 
-func (u *ui) selectPgDown(g *gocui.Gui, v *gocui.View) error {
+func (u *ui) cmdSelectPgDown(g *gocui.Gui, v *gocui.View) error {
 	return u.moveCursorPage(g, 1)
 }
 
-func (u *ui) toggleDebug(g *gocui.Gui, v *gocui.View) (err error) {
+func (u *ui) cmdToggleDebug(g *gocui.Gui, v *gocui.View) (err error) {
 	u.showDebug = !u.showDebug
 	if u.showDebug {
 		g.SetViewOnTop("debug")
@@ -129,7 +129,7 @@ func (u *ui) printDebug(arg ...interface{}) {
 	fmt.Fprintln(d, arg...)
 }
 
-func (u *ui) selectLine(g *gocui.Gui, v *gocui.View) (err error) {
+func (u *ui) cmdSelectLine(g *gocui.Gui, v *gocui.View) (err error) {
 	output, err := g.View("output")
 	if err != nil {
 		return
@@ -142,7 +142,7 @@ func (u *ui) selectLine(g *gocui.Gui, v *gocui.View) (err error) {
 	return gocui.ErrQuit
 }
 
-func (u *ui) toggleFilter(g *gocui.Gui, v *gocui.View) (err error) {
+func (u *ui) cmdToggleFilter(g *gocui.Gui, v *gocui.View) (err error) {
 	output, err := g.View("output")
 	if err != nil {
 		return
@@ -172,18 +172,18 @@ func (u *ui) keybindings() (err error) {
 		key interface{}
 		f   func(*gocui.Gui, *gocui.View) error
 	}{
-		{gocui.KeyCtrlG, u.abort},
-		{gocui.KeyF12, u.toggleDebug},
-		{gocui.KeyCtrlC, u.abort},
-		{gocui.KeyArrowDown, u.selectDown},
-		{gocui.KeyCtrlN, u.selectDown},
-		{gocui.KeyArrowUp, u.selectUp},
-		{gocui.KeyCtrlP, u.selectUp},
-		{gocui.KeyPgup, u.selectPgUp},
-		{gocui.KeyPgdn, u.selectPgDown},
-		{gocui.KeyEnter, u.selectLine},
-		{gocui.KeyCtrlF, u.toggleFilter},
-		{gocui.KeyCtrlU, u.clearInputLine},
+		{gocui.KeyCtrlG, u.cmdAbort},
+		{gocui.KeyF12, u.cmdToggleDebug},
+		{gocui.KeyCtrlC, u.cmdAbort},
+		{gocui.KeyArrowDown, u.cmdSelectDown},
+		{gocui.KeyCtrlN, u.cmdSelectDown},
+		{gocui.KeyArrowUp, u.cmdSelectUp},
+		{gocui.KeyCtrlP, u.cmdSelectUp},
+		{gocui.KeyPgup, u.cmdSelectPgUp},
+		{gocui.KeyPgdn, u.cmdSelectPgDown},
+		{gocui.KeyEnter, u.cmdSelectLine},
+		{gocui.KeyCtrlF, u.cmdToggleFilter},
+		{gocui.KeyCtrlU, u.cmdClearInputLine},
 	}
 
 	for _, b := range binds {
@@ -430,7 +430,7 @@ func Ui(opts Options, args []string) (ret string, err error) {
 			err = E.Annotate(err, "Initial run failed")
 		}
 		if opts.IsSet("enable-filtering") {
-			UI.toggleFilter(nil, nil)
+			UI.cmdToggleFilter(nil, nil)
 		}
 		return
 	})
