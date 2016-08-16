@@ -197,10 +197,14 @@ func (u *ui) keybindings() (err error) {
 }
 
 func (u *ui) Sync(p []byte) (err error) {
+	// Create a copy to prevent data race
+	data := make([]byte, len(p))
+	copy(data, p)
+
 	u.gui.Execute(func(g *gocui.Gui) (err error) {
 		out, err := g.View("output")
-		_, err = out.Write(p)
-		u.lines += bytes.Count(p, []byte("\n"))
+		_, err = out.Write(data)
+		u.lines += bytes.Count(data, []byte("\n"))
 		inp, err := g.View("input")
 		filtering := ""
 		if u.filter != nil {
