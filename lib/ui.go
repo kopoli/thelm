@@ -155,14 +155,13 @@ func (u *ui) cmdToggleFilter(g *gocui.Gui, v *gocui.View) (err error) {
 		u.clearInput(u.filter.input)
 		u.lines = 0
 		u.filter = nil
-
-		u.triggerRun()
 	} else {
 		u.filter = &filter{}
 		u.filter.buf.Sync = u.Sync
 		u.filter.buf.Push(output.Buffer())
 		u.filter.input, err = u.clearInput("")
 	}
+	u.triggerRun()
 
 	return
 }
@@ -270,6 +269,7 @@ func (u *ui) clearInput(in string) (out string, err error) {
 	}
 	out, err = u.getInputLine()
 	if err != nil {
+		err = nil
 		return
 	}
 
@@ -344,6 +344,7 @@ func (u *ui) triggerRun() (err error) {
 func (u *ui) backwardKillWord(v *gocui.View) (err error) {
 	line, err := u.getInputLine()
 	if err != nil {
+		err = nil
 		return
 	}
 
