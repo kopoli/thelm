@@ -29,7 +29,7 @@ func fault(err error, message string, arg ...string) {
 
 func main() {
 	opts := thelm.GetOptions()
-	opts.Set("program-name", "thelm")
+	opts.Set("program-name", os.Args[0])
 	opts.Set("program-version", progVersion)
 
 	args, err := thelm.Cli(opts, os.Args)

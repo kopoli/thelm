@@ -1,6 +1,7 @@
 package thelm
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -10,24 +11,35 @@ import (
 // UiAbortedErr tells if user wanted to abort
 var UiAbortedErr = E.New("User interface was aborted")
 
+type filter struct {
+	buf Buffer
+	input string
+}
+
 type ui struct {
 	args            []string
 	hideInitialArgs bool
 	singleArg       bool
 	relaxedRe       bool
+	showDebug       bool
 
-	cmd  Command
-	gui  *gocui.Gui
-	line string
+	cmd   Command
+	gui   *gocui.Gui
+	line  string
+	lines int
 
 	inputTitle string
 
-	filter   *Buffer
-	prevline string
+	filter *filter
 }
 
-func (u *ui) abort(g *gocui.Gui, v *gocui.View) error {
+func (u *ui) cmdAbort(g *gocui.Gui, v *gocui.View) error {
 	return UiAbortedErr
+}
+
+func (u *ui) cmdClearInputLine(g *gocui.Gui, v *gocui.View) (err error) {
+	_, _ = u.clearInput("")
+	return
 }
 
 func minmax(low int, value int, high int) int {
@@ -50,8 +62,8 @@ func (u *ui) moveCursor(g *gocui.Gui, relpos int) (err error) {
 
 	oy = oy + relpos
 	y = y + relpos
-	if oy > u.cmd.Out.Count {
-		oy = u.cmd.Out.Count
+	if oy > u.lines {
+		oy = u.lines - 1
 	}
 	if y < 0 || y >= maxy {
 		if oy >= 0 {
@@ -63,23 +75,61 @@ func (u *ui) moveCursor(g *gocui.Gui, relpos int) (err error) {
 		y = minmax(0, y, maxy-1)
 	}
 
-	if y+oy > u.cmd.Out.Count {
-		y = u.cmd.Out.Count - oy
+	if y+oy > u.lines {
+		y = u.lines - oy
 	}
 
 	err = v.SetCursor(x, y)
 	return
 }
 
-func (u *ui) selectUp(g *gocui.Gui, v *gocui.View) error {
+func (u *ui) moveCursorPage(g *gocui.Gui, relpage int) (err error) {
+	out, err := g.View("output")
+	if err != nil {
+		return
+	}
+
+	_, maxy := out.Size()
+
+	return u.moveCursor(g, maxy*relpage)
+}
+
+func (u *ui) cmdSelectUp(g *gocui.Gui, v *gocui.View) error {
 	return u.moveCursor(g, -1)
 }
 
-func (u *ui) selectDown(g *gocui.Gui, v *gocui.View) error {
+func (u *ui) cmdSelectDown(g *gocui.Gui, v *gocui.View) error {
 	return u.moveCursor(g, 1)
 }
 
-func (u *ui) selectLine(g *gocui.Gui, v *gocui.View) (err error) {
+func (u *ui) cmdSelectPgUp(g *gocui.Gui, v *gocui.View) error {
+	return u.moveCursorPage(g, -1)
+}
+
+func (u *ui) cmdSelectPgDown(g *gocui.Gui, v *gocui.View) error {
+	return u.moveCursorPage(g, 1)
+}
+
+func (u *ui) cmdToggleDebug(g *gocui.Gui, v *gocui.View) (err error) {
+	u.showDebug = !u.showDebug
+	if u.showDebug {
+		g.SetViewOnTop("debug")
+	} else {
+		g.SetViewOnTop("output")
+		g.SetViewOnTop("input")
+	}
+	return
+}
+
+func (u *ui) printDebug(arg ...interface{}) {
+	d, err := u.gui.View("debug")
+	if err != nil {
+		return
+	}
+	fmt.Fprintln(d, arg...)
+}
+
+func (u *ui) cmdSelectLine(g *gocui.Gui, v *gocui.View) (err error) {
 	output, err := g.View("output")
 	if err != nil {
 		return
@@ -92,22 +142,27 @@ func (u *ui) selectLine(g *gocui.Gui, v *gocui.View) (err error) {
 	return gocui.ErrQuit
 }
 
-func (u *ui) pushFilter(g *gocui.Gui, v *gocui.View) (err error) {
-	if u.filter != nil {
+func (u *ui) cmdToggleFilter(g *gocui.Gui, v *gocui.View) (err error) {
+	output, err := g.View("output")
+	if err != nil {
 		return
 	}
-	u.filter = &u.cmd.Out
-	u.prevline, err = u.clearInput("")
-	return
-}
 
-func (u *ui) popFilter(g *gocui.Gui, v *gocui.View) (err error) {
-	if u.filter == nil {
-		return
+	u.printDebug("Filtering")
+	u.printDebug(u.filter)
+	if u.filter != nil {
+		u.filter.buf.Pop(output)
+		u.clearInput(u.filter.input)
+		u.lines = 0
+		u.filter = nil
+	} else {
+		u.filter = &filter{}
+		u.filter.buf.Sync = u.Sync
+		u.filter.buf.Push(output.Buffer())
+		u.filter.input, err = u.clearInput("")
 	}
-	u.filter = nil
-	u.clearInput(u.prevline)
 	u.triggerRun()
+
 	return
 }
 
@@ -116,15 +171,18 @@ func (u *ui) keybindings() (err error) {
 		key interface{}
 		f   func(*gocui.Gui, *gocui.View) error
 	}{
-		{gocui.KeyCtrlG, u.abort},
-		{gocui.KeyCtrlC, u.abort},
-		{gocui.KeyArrowDown, u.selectDown},
-		{gocui.KeyCtrlN, u.selectDown},
-		{gocui.KeyArrowUp, u.selectUp},
-		{gocui.KeyCtrlP, u.selectUp},
-		{gocui.KeyEnter, u.selectLine},
-		{gocui.KeyCtrlF, u.pushFilter},
-		{gocui.KeyCtrlU, u.popFilter},
+		{gocui.KeyCtrlG, u.cmdAbort},
+		{gocui.KeyF12, u.cmdToggleDebug},
+		{gocui.KeyCtrlC, u.cmdAbort},
+		{gocui.KeyArrowDown, u.cmdSelectDown},
+		{gocui.KeyCtrlN, u.cmdSelectDown},
+		{gocui.KeyArrowUp, u.cmdSelectUp},
+		{gocui.KeyCtrlP, u.cmdSelectUp},
+		{gocui.KeyPgup, u.cmdSelectPgUp},
+		{gocui.KeyPgdn, u.cmdSelectPgDown},
+		{gocui.KeyEnter, u.cmdSelectLine},
+		{gocui.KeyCtrlF, u.cmdToggleFilter},
+		{gocui.KeyCtrlU, u.cmdClearInputLine},
 	}
 
 	for _, b := range binds {
@@ -137,36 +195,48 @@ func (u *ui) keybindings() (err error) {
 	return
 }
 
-func (u *ui) setLayout(g *gocui.Gui) (err error) {
+func (u *ui) Sync(p []byte) (err error) {
+	// Create a copy to prevent data race
+	data := make([]byte, len(p))
+	copy(data, p)
+
+	u.gui.Execute(func(g *gocui.Gui) (err error) {
+		out, err := g.View("output")
+		_, err = out.Write(data)
+		u.lines += bytes.Count(data, []byte("\n"))
+		inp, err := g.View("input")
+		filtering := ""
+		if u.filter != nil {
+			filtering = " - filtering"
+		}
+		inp.Title = fmt.Sprintf("%s%s - %d",
+			u.inputTitle, filtering,
+			u.lines)
+		return
+	})
+	return
+}
+
+// createLayout initializes the ui
+func (u *ui) createLayout(g *gocui.Gui) (err error) {
 	maxx, maxy := g.Size()
 
-	v, err := g.SetView("output", -1, -1, maxx, maxy-2)
+	v, err := g.SetView("debug", maxx*10/100, maxy*10/100, maxx-maxx*10/100, maxy-maxy*10/100)
+	if err == gocui.ErrUnknownView {
+		err = nil
+
+		fmt.Fprintln(v, "Debug log:")
+	}
+	if err != nil {
+		return
+	}
+
+	v, err = g.SetView("output", -1, -1, maxx, maxy-2)
 	if err == gocui.ErrUnknownView {
 		v.Highlight = true
 		err = nil
 
-		u.cmd.Out = Buffer{
-			Passthrough: v,
-			AfterWrite: func() {
-				g.Execute(func(g *gocui.Gui) (err error) {
-					inp, err := g.View("input")
-					filtering := ""
-					if u.filter != nil {
-						filtering = " - filtering"
-					}
-					inp.Title = fmt.Sprintf("%s%s - %d",
-						u.inputTitle, filtering,
-						u.cmd.Out.Count)
-					return
-				})
-			},
-			OnStart: func() error {
-				out, err := g.View("output")
-				out.Clear()
-				out.SetCursor(0, 0)
-				return err
-			},
-		}
+		u.cmd.Sync = u.Sync
 	}
 	if err != nil {
 		return
@@ -200,6 +270,7 @@ func (u *ui) clearInput(in string) (out string, err error) {
 	}
 	out, err = u.getInputLine()
 	if err != nil {
+		err = nil
 		return
 	}
 
@@ -207,6 +278,14 @@ func (u *ui) clearInput(in string) (out string, err error) {
 	fmt.Fprint(v, in)
 	_ = v.SetCursor(len(in), 0)
 
+	return
+}
+
+func (u *ui) clearOutput() (err error) {
+	out, err := u.gui.View("output")
+	out.Clear()
+	out.SetCursor(0, 0)
+	u.lines = 0
 	return
 }
 
@@ -235,9 +314,10 @@ func (u *ui) getInputLine() (ret string, err error) {
 func (u *ui) triggerRun() (err error) {
 	// Ignore error if input line cannot be read
 	line, _ := u.getInputLine()
+	u.clearOutput()
 
 	if u.filter != nil {
-		_ = u.filter.Filter(line)
+		_, _ = u.filter.buf.Filter(line)
 	} else {
 		var args []string
 		if u.hideInitialArgs {
@@ -265,6 +345,7 @@ func (u *ui) triggerRun() (err error) {
 func (u *ui) backwardKillWord(v *gocui.View) (err error) {
 	line, err := u.getInputLine()
 	if err != nil {
+		err = nil
 		return
 	}
 
@@ -342,7 +423,7 @@ func Ui(opts Options, args []string) (ret string, err error) {
 	UI.gui.SelFgColor = gocui.AttrBold
 	UI.gui.Cursor = true
 
-	UI.gui.SetLayout(UI.setLayout)
+	UI.gui.SetLayout(UI.createLayout)
 	err = UI.keybindings()
 	if err != nil {
 		err = E.Annotate(err, "Setting keybindings failed")
@@ -355,7 +436,7 @@ func Ui(opts Options, args []string) (ret string, err error) {
 			err = E.Annotate(err, "Initial run failed")
 		}
 		if opts.IsSet("enable-filtering") {
-			UI.pushFilter(nil, nil)
+			UI.cmdToggleFilter(nil, nil)
 		}
 		return
 	})
