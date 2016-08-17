@@ -217,7 +217,8 @@ func (u *ui) Sync(p []byte) (err error) {
 	return
 }
 
-func (u *ui) setLayout(g *gocui.Gui) (err error) {
+// createLayout initializes the ui
+func (u *ui) createLayout(g *gocui.Gui) (err error) {
 	maxx, maxy := g.Size()
 
 	v, err := g.SetView("debug", maxx*10/100, maxy*10/100, maxx-maxx*10/100, maxy-maxy*10/100)
@@ -422,7 +423,7 @@ func Ui(opts Options, args []string) (ret string, err error) {
 	UI.gui.SelFgColor = gocui.AttrBold
 	UI.gui.Cursor = true
 
-	UI.gui.SetLayout(UI.setLayout)
+	UI.gui.SetLayout(UI.createLayout)
 	err = UI.keybindings()
 	if err != nil {
 		err = E.Annotate(err, "Setting keybindings failed")
