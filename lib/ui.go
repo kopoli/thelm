@@ -197,8 +197,7 @@ func (u *ui) keybindings() (err error) {
 
 func (u *ui) Sync(p []byte) (err error) {
 	// Create a copy to prevent data race
-	data := make([]byte, len(p))
-	copy(data, p)
+	data := bytes.Replace(p, []byte("\t"), []byte("        "), -1)
 
 	u.gui.Execute(func(g *gocui.Gui) (err error) {
 		out, err := g.View("output")
