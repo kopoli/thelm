@@ -3,12 +3,15 @@ package thelm
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
 	termbox "github.com/nsf/termbox-go"
 )
 
 type ui struct {
 	view UIView
+
+	cmd Command
 
 	input  string
 	cursor int
@@ -21,7 +24,7 @@ var UiSelectedErr = E.New("User selected a line")
 
 // Input line handling
 
-// add character at the cursor position
+// adds character at the cursor position
 func (u *ui) addInputRune(ch rune) {
 	var buf bytes.Buffer
 
@@ -32,6 +35,18 @@ func (u *ui) addInputRune(ch rune) {
 	u.input = buf.String()
 }
 
+// removes count characters from cursor
+func (u *ui) removeInput(count int) {
+	var buf bytes.Buffer
+
+	start := minmax(0, u.cursor - count, len(u.input))
+	buf.WriteString(u.input[:start])
+	buf.WriteString(u.input[u.cursor:])
+	u.input = buf.String()
+	u.cursor = start
+}
+
+// EditInput handles the input line manipulation
 func (u *ui) EditInput(ev termbox.Event) error {
 
 	if ev.Ch != 0 {
@@ -44,13 +59,24 @@ func (u *ui) EditInput(ev termbox.Event) error {
 			u.cursor++
 		case termbox.KeySpace:
 			u.addInputRune(' ')
+		case termbox.KeyBackspace:
+			u.removeInput(1)
+		case termbox.KeyBackspace2:
+			u.removeInput(1)
+		default:
+			return nil
 		}
 	}
 
+	// Update the input line
 	u.cursor = minmax(0, u.cursor, len(u.input))
-
 	u.view.SetInputLine(u.input, u.cursor)
 	u.view.Flush()
+
+	// Run the command
+	u.view.Clear()
+	args := strings.Split(u.input, " ")
+	_ = u.cmd.Run(args[0], args[1:]...)
 	return nil
 }
 
@@ -111,6 +137,16 @@ func (u *ui) handleEventKey(key termbox.Key) (err error) {
 	return
 }
 
+// The handling of the command running
+
+// Write receives data to be displayed on screen
+func (u *ui) Write(p []byte) (n int, err error) {
+	n, err = u.view.Write(p)
+	u.view.Flush()
+
+	return
+}
+
 // Ui runs the user interface that selects the line from input
 func Ui(opts Options, args []string) (ret string, err error) {
 
@@ -124,12 +160,15 @@ func Ui(opts Options, args []string) (ret string, err error) {
 	defer termbox.Close()
 	termbox.SetInputMode(termbox.InputEsc)
 
-	// Testingui.
+	// Testing ui.
 	u.view.SetStatusLine(" Thelm testi ")
 	fmt.Fprintln(&u.view, "viewtesti")
 	fmt.Fprintln(&u.view, "Tahan toiselle riville")
 	fmt.Fprintln(&u.view, "Kolmas rivi")
 	u.view.Flush()
+
+	u.cmd.Passthrough = &u
+	u.cmd.Run("ls", "-lah")
 
 	// Main loop
 	for {

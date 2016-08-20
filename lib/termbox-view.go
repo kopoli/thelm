@@ -39,7 +39,6 @@ func (u *UIView) nextLineOffset(start int) (offset int) {
 // gets the byte offset of a given line
 func (u *UIView) lineToByteOffset(inputLine int) (offset int) {
 	for line := 0; line < inputLine; line++ {
-		// offset = bytes.Index(u.buffer[offset:], []byte("\n")) + 1
 		offset = u.nextLineOffset(offset)
 	}
 	return
@@ -47,10 +46,6 @@ func (u *UIView) lineToByteOffset(inputLine int) (offset int) {
 
 // gets the offset of the first line that should be drawn
 func (u *UIView) startLineOffset() (offset int) {
-	// for line := 0; line < u.offsetY; line++ {
-	// 	offset = bytes.Index(u.buffer[offset:], []byte("\n")) + 1
-	// }
-
 	return u.lineToByteOffset(u.offsetY)
 }
 
@@ -121,46 +116,40 @@ func (u *UIView) Flush() {
 	u.updateViewSize()
 
 	// Get the start line in the buffer
-	pos := u.offsetX
-	if u.offsetY > 0 {
-		pos += u.startLineOffset()
-	}
-
-	fg := coldef
-	bg := coldef
-
-	// Draw the buffer text on screen
-	for y := 0; y < u.sizeY; y++ {
-		// end := bytes.Index(u.buffer[pos:], []byte("\n"))
-		end := u.nextLineOffset(pos) - 1
-		// if end < 0 {
-		// 	end = len(u.buffer)
-		// } else {
-		// 	end += pos
-		// }
-
-		// Set up highlighting
-		if u.highlightY == y {
-			bg = termbox.AttrReverse
-			fg = termbox.AttrBold
-		} else {
-			fg = coldef
-			bg = coldef
+	if u.lines > 0 {
+		pos := u.offsetX
+		if u.offsetY > 0 {
+			pos += u.startLineOffset()
 		}
 
-		// fmt.Println("Pos", pos, "end", end, "len", len(u.buffer))
+		fg := coldef
+		bg := coldef
 
-		line := string(u.buffer[pos:end])
-		u.drawText(0, y, fg, bg, line)
+		// Draw the buffer text on screen
+		for y := 0; y < u.sizeY; y++ {
+			end := u.nextLineOffset(pos) - 1
 
-		if u.highlightY == y {
-			length := u.sizeX - len(line)
-			u.fillLine(len(line), y, length, fg, bg, ' ')
-		}
+			// Set up highlighting
+			if u.highlightY == y {
+				bg = termbox.AttrReverse
+				fg = termbox.AttrBold
+			} else {
+				fg = coldef
+				bg = coldef
+			}
 
-		pos = u.offsetX + end + 1
-		if pos >= len(u.buffer) {
-			break
+			line := string(u.buffer[pos:end])
+			u.drawText(0, y, fg, bg, line)
+
+			if u.highlightY == y {
+				length := u.sizeX - len(line)
+				u.fillLine(len(line), y, length, fg, bg, ' ')
+			}
+
+			pos = u.offsetX + end + 1
+			if pos >= len(u.buffer) {
+				break
+			}
 		}
 	}
 
@@ -168,7 +157,7 @@ func (u *UIView) Flush() {
 	y := u.sizeY - 1
 	u.fillLine(0, y, 2, coldef, coldef, '-')
 	u.drawText(2, y, coldef, coldef, u.statusLine)
-	pos = 2 + len(u.statusLine)
+	pos := 2 + len(u.statusLine)
 	u.fillLine(pos, y, u.sizeX-pos, coldef, coldef, '-')
 
 	// Draw the input line
