@@ -29,7 +29,7 @@ func (u *UIView) nextLineOffset(start int) (offset int) {
 	offset = bytes.Index(u.buffer[start:], []byte("\n")) + 1
 
 	if offset == 0 {
-		offset = len(u.buffer) - 1
+		offset = len(u.buffer)
 	} else {
 		offset += start
 	}
@@ -138,6 +138,7 @@ func (u *UIView) Flush() {
 				bg = coldef
 			}
 
+			// fmt.Println("pos", pos, "end", end, "len", len(u.buffer))
 			line := string(u.buffer[pos:end])
 			u.drawText(0, y, fg, bg, line)
 

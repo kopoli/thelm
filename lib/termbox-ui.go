@@ -57,7 +57,7 @@ func (u *ui) setStatusLine(lines int) {
 	u.view.SetStatusLine(fmt.Sprintf(" %s - %d ", u.optInputTitle, lines))
 }
 
-// Refresh updates the UI
+// Refresh updates the UI from the internal data
 func (u *ui) Refresh() {
 	// Update the input line
 	u.cursor = minmax(0, u.cursor, len(u.input))
@@ -187,14 +187,14 @@ func Ui(opts Options, args []string) (ret string, err error) {
 	termbox.SetInputMode(termbox.InputEsc)
 
 	// Testing ui.
-	u.view.SetStatusLine(" Thelm testi ")
-	fmt.Fprintln(&u.view, "viewtesti")
-	fmt.Fprintln(&u.view, "Tahan toiselle riville")
-	fmt.Fprintln(&u.view, "Kolmas rivi")
-	u.view.Flush()
+	// u.view.SetStatusLine(" Thelm testi ")
+	// fmt.Fprintln(&u.view, "viewtesti")
+	// fmt.Fprintln(&u.view, "Tahan toiselle riville")
+	// fmt.Fprintln(&u.view, "Kolmas rivi")
+	// u.view.Flush()
 
 	u.cmd.Passthrough = &u
-	u.cmd.Run("ls", "-lah")
+	// u.cmd.Run("ls", "-lah")
 
 	u.input = strings.Join(u.optArgs, " ")
 	u.cursor = len(u.input)
