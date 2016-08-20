@@ -7,8 +7,11 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-type UiView struct {
+// UIView is the graphical representation of the data. It is used to draw the
+// data to the screen.
+type UIView struct {
 	buffer           []byte
+	lines            int
 	sizeX, sizeY     int
 	offsetX, offsetY int
 	highlightY       int
@@ -21,16 +24,38 @@ type UiView struct {
 	mutex sync.Mutex
 }
 
-// gets the offset of the first line that should be drawn
-func (u *UiView) startLineOffset() (offset int) {
-	for line := 0; line < u.offsetY; line++ {
-		offset = bytes.Index(u.buffer[offset:], []byte("\n")) + 1
+// gets the offset of the start of the next line
+func (u *UIView) nextLineOffset(start int) (offset int) {
+	offset = bytes.Index(u.buffer[start:], []byte("\n")) + 1
+
+	if offset == 0 {
+		offset = len(u.buffer) - 1
+	} else {
+		offset += start
+	}
+	return offset
+}
+
+// gets the byte offset of a given line
+func (u *UIView) lineToByteOffset(inputLine int) (offset int) {
+	for line := 0; line < inputLine; line++ {
+		// offset = bytes.Index(u.buffer[offset:], []byte("\n")) + 1
+		offset = u.nextLineOffset(offset)
 	}
 	return
 }
 
+// gets the offset of the first line that should be drawn
+func (u *UIView) startLineOffset() (offset int) {
+	// for line := 0; line < u.offsetY; line++ {
+	// 	offset = bytes.Index(u.buffer[offset:], []byte("\n")) + 1
+	// }
+
+	return u.lineToByteOffset(u.offsetY)
+}
+
 // draws a string on screen
-func (u *UiView) drawText(x, y int, fg, bg termbox.Attribute, text string) {
+func (u *UIView) drawText(x, y int, fg, bg termbox.Attribute, text string) {
 	for _, ch := range text {
 		termbox.SetCell(x, y, ch, fg, bg)
 		x++
@@ -38,24 +63,34 @@ func (u *UiView) drawText(x, y int, fg, bg termbox.Attribute, text string) {
 }
 
 // fills a line on screen with given cell
-func (u *UiView) fillLine(x, y, w int, fg, bg termbox.Attribute, ch rune) {
+func (u *UIView) fillLine(x, y, w int, fg, bg termbox.Attribute, ch rune) {
 	for pos := 0; pos < w; pos++ {
 		termbox.SetCell(x+pos, y, ch, fg, bg)
 	}
 }
 
 // update the view size which is the screen minus the input and the data lines
-func (u *UiView) updateViewSize() {
+func (u *UIView) updateViewSize() {
 	u.sizeX, u.sizeY = termbox.Size()
 	u.sizeY -= 2
+}
+
+func minmax(low int, value int, high int) int {
+	if value < low {
+		return low
+	} else if value > high {
+		return high
+	}
+	return value
 }
 
 // The public interface
 
 // Write writes the given data to the view. This can be called from anywhere.
-func (u *UiView) Write(p []byte) (n int, err error) {
+func (u *UIView) Write(p []byte) (n int, err error) {
 	u.mutex.Lock()
 
+	u.lines += bytes.Count(p, []byte("\n"))
 	u.buffer = append(u.buffer, p...)
 	n = len(p)
 
@@ -64,15 +99,19 @@ func (u *UiView) Write(p []byte) (n int, err error) {
 }
 
 // Clear clears the view buffer
-func (u *UiView) Clear() {
+func (u *UIView) Clear() {
 	u.mutex.Lock()
 	u.buffer = []byte{}
+	u.lines = 0
+	u.highlightY = 0
+	u.offsetX = 0
+	u.offsetY = 0
 	u.mutex.Unlock()
 	u.ShiftView(0, 0)
 }
 
 // Flush updates the whole screen
-func (u *UiView) Flush() {
+func (u *UIView) Flush() {
 	u.mutex.Lock()
 
 	// Clear the screen
@@ -92,12 +131,13 @@ func (u *UiView) Flush() {
 
 	// Draw the buffer text on screen
 	for y := 0; y < u.sizeY; y++ {
-		end := bytes.Index(u.buffer[pos:], []byte("\n"))
-		if end < 0 {
-			end = len(u.buffer)
-		} else {
-			end += pos
-		}
+		// end := bytes.Index(u.buffer[pos:], []byte("\n"))
+		end := u.nextLineOffset(pos) - 1
+		// if end < 0 {
+		// 	end = len(u.buffer)
+		// } else {
+		// 	end += pos
+		// }
 
 		// Set up highlighting
 		if u.highlightY == y {
@@ -141,29 +181,47 @@ func (u *UiView) Flush() {
 }
 
 // SetStatusLine sets the status line to a given string
-func (u *UiView) SetStatusLine(line string) {
+func (u *UIView) SetStatusLine(line string) {
 	u.mutex.Lock()
 	u.statusLine = line
 	u.mutex.Unlock()
 }
 
-// SetInputLine sets the input line to given and moves the cursor to absolute x
-func (u *UiView) SetInputLine(line string, cursorx int) {
+// MoveInputLine sets the input line to given and moves the cursor to absolute x
+func (u *UIView) SetInputLine(line string, cursorx int) {
 	u.mutex.Lock()
 	u.inputLine = line
-	u.inputCursorX = cursorx
+	u.inputCursorX = minmax(0, cursorx, len(line))
 	u.mutex.Unlock()
 }
 
-// HighlightLine highlights a given line on the view
-func (u *UiView) HighlightLine(y int) {
+// HighlightLine highlights a given line on the view.
+func (u *UIView) MoveHighlightLine(ydiff int) {
 	u.mutex.Lock()
-	u.highlightY = y
+	lines := u.lines - 1
+	if lines < 0 {
+		lines = 0
+	}
+	u.highlightY = minmax(0, u.highlightY+ydiff, lines)
 	u.mutex.Unlock()
+}
+
+// GetHighlightLine returns the string from the view buffer that is currently
+// highlighted
+func (u *UIView) GetHighlightLine() string {
+	u.mutex.Lock()
+
+	start := u.lineToByteOffset(u.highlightY)
+	stop := u.nextLineOffset(start)
+
+	ret := string(u.buffer[start:stop])
+
+	u.mutex.Unlock()
+	return ret
 }
 
 // ShiftView shifts the view by given difference in the data
-func (u *UiView) ShiftView(x int, y int) {
+func (u *UIView) ShiftView(x int, y int) {
 	u.mutex.Lock()
 	u.offsetX = x
 	u.offsetY = y
@@ -171,7 +229,7 @@ func (u *UiView) ShiftView(x int, y int) {
 }
 
 // ViewSize returns the size of the view
-func (u *UiView) ViewSize() (x int, y int) {
+func (u *UIView) ViewSize() (x int, y int) {
 	u.mutex.Lock()
 	u.updateViewSize()
 	u.mutex.Unlock()
