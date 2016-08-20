@@ -224,3 +224,11 @@ func (u *UIView) ViewSize() (x int, y int) {
 	u.mutex.Unlock()
 	return u.sizeX, u.sizeY
 }
+
+// GetDataLines returns the number of lines in the view
+func (u *UIView) GetDataLines() (ret int) {
+	u.mutex.Lock()
+	ret = u.lines
+	u.mutex.Unlock()
+	return
+}

@@ -9,7 +9,7 @@ import (
 )
 
 type ui struct {
-	view UIView
+	view  UIView
 
 	cmd Command
 
@@ -39,11 +39,16 @@ func (u *ui) addInputRune(ch rune) {
 func (u *ui) removeInput(count int) {
 	var buf bytes.Buffer
 
-	start := minmax(0, u.cursor - count, len(u.input))
+	start := minmax(0, u.cursor-count, len(u.input))
 	buf.WriteString(u.input[:start])
 	buf.WriteString(u.input[u.cursor:])
 	u.input = buf.String()
 	u.cursor = start
+}
+
+// updates the statusline
+func (u *ui) setStatusLine(lines int) {
+	u.view.SetStatusLine(fmt.Sprintf(" Thelm - %d", lines))
 }
 
 // EditInput handles the input line manipulation
@@ -76,7 +81,10 @@ func (u *ui) EditInput(ev termbox.Event) error {
 	// Run the command
 	u.view.Clear()
 	args := strings.Split(u.input, " ")
-	_ = u.cmd.Run(args[0], args[1:]...)
+	err := u.cmd.Run(args[0], args[1:]...)
+	if err != nil {
+		u.setStatusLine(0)
+	}
 	return nil
 }
 
@@ -142,8 +150,8 @@ func (u *ui) handleEventKey(key termbox.Key) (err error) {
 // Write receives data to be displayed on screen
 func (u *ui) Write(p []byte) (n int, err error) {
 	n, err = u.view.Write(p)
+	u.setStatusLine(u.view.GetDataLines())
 	u.view.Flush()
-
 	return
 }
 
