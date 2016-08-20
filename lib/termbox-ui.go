@@ -9,7 +9,13 @@ import (
 )
 
 type ui struct {
-	view  UIView
+	optInputTitle      string
+	optHideInitialArgs bool
+	optSingleArg       bool
+	optRelaxedRe       bool
+	optArgs            []string
+
+	view UIView
 
 	cmd Command
 
@@ -48,7 +54,23 @@ func (u *ui) removeInput(count int) {
 
 // updates the statusline
 func (u *ui) setStatusLine(lines int) {
-	u.view.SetStatusLine(fmt.Sprintf(" Thelm - %d", lines))
+	u.view.SetStatusLine(fmt.Sprintf(" %s - %d ", u.optInputTitle, lines))
+}
+
+// Refresh updates the UI
+func (u *ui) Refresh() {
+	// Update the input line
+	u.cursor = minmax(0, u.cursor, len(u.input))
+	u.view.SetInputLine(u.input, u.cursor)
+	u.view.Flush()
+
+	// Run the command
+	u.view.Clear()
+	args := strings.Split(u.input, " ")
+	err := u.cmd.Run(args[0], args[1:]...)
+	if err != nil {
+		u.setStatusLine(0)
+	}
 }
 
 // EditInput handles the input line manipulation
@@ -73,18 +95,8 @@ func (u *ui) EditInput(ev termbox.Event) error {
 		}
 	}
 
-	// Update the input line
-	u.cursor = minmax(0, u.cursor, len(u.input))
-	u.view.SetInputLine(u.input, u.cursor)
-	u.view.Flush()
+	u.Refresh()
 
-	// Run the command
-	u.view.Clear()
-	args := strings.Split(u.input, " ")
-	err := u.cmd.Run(args[0], args[1:]...)
-	if err != nil {
-		u.setStatusLine(0)
-	}
 	return nil
 }
 
@@ -160,6 +172,12 @@ func Ui(opts Options, args []string) (ret string, err error) {
 
 	var u ui
 
+	u.optInputTitle = opts.Get("input-title", "thelm")
+	u.optHideInitialArgs = opts.IsSet("hide-initial-args")
+	u.optSingleArg = opts.IsSet("single-argument")
+	u.optRelaxedRe = opts.IsSet("relaxed-regexp")
+	u.optArgs = args
+
 	// Termbox setup
 	err = termbox.Init()
 	if err != nil {
@@ -177,6 +195,10 @@ func Ui(opts Options, args []string) (ret string, err error) {
 
 	u.cmd.Passthrough = &u
 	u.cmd.Run("ls", "-lah")
+
+	u.input = strings.Join(u.optArgs, " ")
+	u.cursor = len(u.input)
+	u.Refresh()
 
 	// Main loop
 	for {
