@@ -177,7 +177,7 @@ func (u *UIView) SetStatusLine(line string) {
 	u.mutex.Unlock()
 }
 
-// MoveInputLine sets the input line to given and moves the cursor to absolute x
+// SetInputLine sets the input line to given and moves the cursor to absolute x
 func (u *UIView) SetInputLine(line string, cursorx int) {
 	u.mutex.Lock()
 	u.inputLine = line
@@ -185,13 +185,11 @@ func (u *UIView) SetInputLine(line string, cursorx int) {
 	u.mutex.Unlock()
 }
 
-// HighlightLine highlights a given line on the view.
+// MoveHighlightLine highlights a given line on the view.
 func (u *UIView) MoveHighlightLine(ydiff int) {
 	u.mutex.Lock()
-	lines := u.lines - 1
-	if lines < 0 {
-		lines = 0
-	}
+	lines := minmax(0, u.lines - 1, u.sizeY - 1)
+
 	u.highlightY = minmax(0, u.highlightY+ydiff, lines)
 	u.mutex.Unlock()
 }
