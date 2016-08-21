@@ -70,6 +70,7 @@ func (u *UIView) updateViewSize() {
 	u.sizeY -= 2
 }
 
+// return the value between low and high inclusive
 func minmax(low int, value int, high int) int {
 	if value < low {
 		return low
@@ -188,9 +189,46 @@ func (u *UIView) SetInputLine(line string, cursorx int) {
 // MoveHighlightLine highlights a given line on the view.
 func (u *UIView) MoveHighlightLine(ydiff int) {
 	u.mutex.Lock()
-	lines := minmax(0, u.lines - 1, u.sizeY - 1)
+	lines := minmax(0, u.lines-1, u.sizeY-1)
 
 	u.highlightY = minmax(0, u.highlightY+ydiff, lines)
+	u.mutex.Unlock()
+}
+
+// func max(a, b int) int {
+// 	if a < b {
+// 		return b
+// 	}
+// 	return a
+// }
+
+// MoveHighlightAndView moves the highlight primarily. Can shift the view if
+// at limits.
+func (u *UIView) MoveHighlightAndView(ydiff int) {
+	u.mutex.Lock()
+
+	// lines := max(u.lines - 1, u.sizeY - 1)
+	offsety := minmax(0, u.offsetY+ydiff, u.lines-1)
+	hly := minmax(-1, u.highlightY+ydiff, u.lines-1)
+
+	// if offsety >= u.lines {
+	// 	offsety = u.lines - 1
+	// }
+
+	if hly < 0 || hly >= u.sizeY {
+		// if offsety >= 0 {
+		u.offsetY = offsety
+		// }
+		hly = minmax(0, hly, u.sizeY-1)
+	}
+
+	if hly+u.offsetY >= u.lines {
+		hly = u.lines - 1 - u.offsetY
+	}
+
+	u.highlightY = hly
+	// fmt.Println("hly", hly, "offsety", offsety, "real offsety", u.offsetY, "lines", u.lines, "sizey", u.sizeY)
+
 	u.mutex.Unlock()
 }
 

@@ -101,17 +101,17 @@ func (u *ui) EditInput(ev termbox.Event) error {
 
 		// Keys
 		switch {
-		case key ==termbox.KeyArrowLeft:
+		case key == termbox.KeyArrowLeft:
 			u.cursor--
-		case key ==termbox.KeyArrowRight:
+		case key == termbox.KeyArrowRight:
 			u.cursor++
-		case key ==termbox.KeySpace:
+		case key == termbox.KeySpace:
 			u.addInputRune(' ')
-		case key ==termbox.KeyBackspace:
+		case key == termbox.KeyBackspace:
 			u.removeInput(1)
-		case key ==termbox.KeyBackspace2:
+		case key == termbox.KeyBackspace2:
 			u.removeInput(1)
-		case key ==termbox.KeyCtrlU:
+		case key == termbox.KeyCtrlU:
 			u.clearInput()
 		case (mod == termbox.ModAlt && (key == termbox.KeyBackspace ||
 			key == termbox.KeyBackspace2)) ||
@@ -133,8 +133,15 @@ func (u *ui) EditInput(ev termbox.Event) error {
 type handlerFunc func(termbox.Key) error
 
 func (u *ui) moveCursor(ydiff int) error {
-	u.view.MoveHighlightLine(ydiff)
+	// u.view.MoveHighlightLine(ydiff)
+	u.view.MoveHighlightAndView(ydiff)
 	u.view.Flush()
+	return nil
+}
+
+func (u *ui) moveCursorPage(ydiff int) error {
+	_, ypage := u.view.ViewSize()
+	u.moveCursor(ydiff * ypage)
 	return nil
 }
 
@@ -146,13 +153,13 @@ func (u *ui) cmdSelectDown(termbox.Key) error {
 	return u.moveCursor(1)
 }
 
-// func (u *ui) cmdSelectPgUp(termbox.Key) error {
-// 	return u.moveCursorPage(g, -1)
-// }
+func (u *ui) cmdSelectPgUp(termbox.Key) error {
+	return u.moveCursorPage(-1)
+}
 
-// func (u *ui) cmdSelectPgDown(termbox.Key) error {
-// 	return u.moveCursorPage(g, 1)
-// }
+func (u *ui) cmdSelectPgDown(termbox.Key) error {
+	return u.moveCursorPage(1)
+}
 
 // func (u *ui) cmdToggleDebug(g *gocui.Gui, v *gocui.View) (err error) {
 // }
@@ -175,6 +182,8 @@ func (u *ui) handleEventKey(key termbox.Key) (err error) {
 		termbox.KeyCtrlG:     u.cmdAbort,
 		termbox.KeyArrowUp:   u.cmdSelectUp,
 		termbox.KeyArrowDown: u.cmdSelectDown,
+		termbox.KeyPgdn:      u.cmdSelectPgDown,
+		termbox.KeyPgup:      u.cmdSelectPgUp,
 		termbox.KeyEnter:     u.cmdSelectLine,
 	}
 
