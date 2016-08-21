@@ -3,17 +3,22 @@ package thelm
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"strings"
 
 	termbox "github.com/nsf/termbox-go"
 )
 
+type filter struct {
+	buf         Buffer
+	savedInput  string
+	savedCursor int
+}
+
 type ui struct {
-	optInputTitle      string
-	// optHideInitialArgs bool
-	optSingleArg       bool
-	optRelaxedRe       bool
-	// optArgs            []string
+	optInputTitle string
+	optSingleArg  bool
+	optRelaxedRe  bool
 
 	hiddenArgs []string
 
@@ -23,6 +28,8 @@ type ui struct {
 
 	input  string
 	cursor int
+
+	filter *filter
 }
 
 // UiAbortedErr tells if user wanted to abort
@@ -72,10 +79,15 @@ func (u *ui) backwardKillWord() {
 
 // updates the statusline
 func (u *ui) setStatusLine(lines int) {
-	u.view.SetStatusLine(fmt.Sprintf(" %s - %d ", u.optInputTitle, lines))
+	status := ""
+	if u.filter != nil {
+		status = " - filtering"
+	}
+	u.view.SetStatusLine(fmt.Sprintf(" %s%s - %d ", u.optInputTitle, status,
+		lines))
 }
 
-func (u *ui) RunCommand() {
+func (u *ui) RunCommand() error {
 
 	line := u.input
 	var args []string
@@ -92,10 +104,7 @@ func (u *ui) RunCommand() {
 		args = append(args, strings.Split(line, " ")...)
 	}
 
-	err := u.cmd.Run(args[0], args[1:]...)
-	if err != nil {
-		u.setStatusLine(0)
-	}
+	return u.cmd.Run(args[0], args[1:]...)
 }
 
 // Refresh updates the UI from the internal data
@@ -105,14 +114,18 @@ func (u *ui) Refresh() {
 	u.view.SetInputLine(u.input, u.cursor)
 	u.view.Flush()
 
-	// Run the command
+	// Generate the output
 	u.view.Clear()
-	// args := strings.Split(u.input, " ")
-	// err := u.cmd.Run(args[0], args[1:]...)
-	// if err != nil {
-	// 	u.setStatusLine(0)
-	// }
-	u.RunCommand()
+	var err error
+	if u.filter != nil {
+		err = u.filter.buf.Filter(u.input)
+	} else {
+		err = u.RunCommand()
+	}
+
+	if err != nil {
+		u.setStatusLine(0)
+	}
 }
 
 // EditInput handles the input line manipulation
@@ -194,6 +207,31 @@ func (u *ui) cmdAbort(termbox.Key) error {
 	return UiAbortedErr
 }
 
+func (u *ui) cmdToggleFilter(termbox.Key) error {
+
+	if u.filter == nil {
+		u.filter = &filter{
+			savedInput:  u.input,
+			savedCursor: u.cursor,
+		}
+
+		u.input = ""
+		u.cursor = 0
+		u.filter.buf.Passthrough = u
+		io.Copy(&u.filter.buf, &u.view)
+	} else {
+
+		io.Copy(&u.view, &u.filter.buf)
+		u.input = u.filter.savedInput
+		u.cursor = u.filter.savedCursor
+		u.filter = nil
+	}
+	u.view.SetInputLine(u.input, u.cursor)
+	u.view.Flush()
+
+	return nil
+}
+
 func (u *ui) handleEventKey(key termbox.Key) (err error) {
 
 	keyHandlers := map[termbox.Key]handlerFunc{
@@ -203,6 +241,7 @@ func (u *ui) handleEventKey(key termbox.Key) (err error) {
 		termbox.KeyPgdn:      u.cmdSelectPgDown,
 		termbox.KeyPgup:      u.cmdSelectPgUp,
 		termbox.KeyEnter:     u.cmdSelectLine,
+		termbox.KeyCtrlF:     u.cmdToggleFilter,
 	}
 
 	if handler, ok := keyHandlers[key]; ok {
@@ -227,10 +266,8 @@ func Ui(opts Options, args []string) (ret string, err error) {
 	var u ui
 
 	u.optInputTitle = opts.Get("input-title", "thelm")
-	// u.optHideInitialArgs = opts.IsSet("hide-initial-args")
 	u.optSingleArg = opts.IsSet("single-argument")
 	u.optRelaxedRe = opts.IsSet("relaxed-regexp")
-	// u.optArgs = args
 
 	if opts.IsSet("hide-initial-args") {
 		u.hiddenArgs = args
@@ -251,8 +288,6 @@ func Ui(opts Options, args []string) (ret string, err error) {
 	u.cmd.Passthrough = &u
 
 	// Set up the ui and initial draw
-	// u.input = strings.Join(u.optArgs, " ")
-	// u.cursor = len(u.input)
 	u.setStatusLine(0)
 	u.Refresh()
 

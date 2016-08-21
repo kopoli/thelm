@@ -2,6 +2,7 @@ package thelm
 
 import (
 	"bytes"
+	"io"
 	"sync"
 
 	"github.com/nsf/termbox-go"
@@ -11,6 +12,7 @@ import (
 // data to the screen.
 type UIView struct {
 	buffer           []byte
+	readpos          int
 	lines            int
 	sizeX, sizeY     int
 	offsetX, offsetY int
@@ -94,10 +96,23 @@ func (u *UIView) Write(p []byte) (n int, err error) {
 	return
 }
 
+// Read reads the view data contents. This too can be called from anywhere.
+func (u *UIView) Read(p []byte) (n int, err error) {
+	u.mutex.Lock()
+	n = copy(p, u.buffer[u.readpos:])
+	u.readpos += n
+	if u.readpos == len(u.buffer) {
+		err = io.EOF
+	}
+	u.mutex.Unlock()
+	return
+}
+
 // Clear clears the view buffer
 func (u *UIView) Clear() {
 	u.mutex.Lock()
 	u.buffer = []byte{}
+	u.readpos = 0
 	u.lines = 0
 	u.highlightY = 0
 	u.offsetX = 0
