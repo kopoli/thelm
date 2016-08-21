@@ -32,6 +32,14 @@ func (b *Buffer) Read(p []byte) (n int, err error) {
 	return
 }
 
+func (b *Buffer) Close() (error) {
+	if b.done != nil {
+		b.done <- true
+		close(b.done)
+	}
+	return nil
+}
+
 // Filter the current Buffer with the regexp and write output to out.
 func (b *Buffer) Filter(regex string) (err error) {
 	re, err := regexp.Compile("(?i)" + AsRelaxedRegexp(regex))

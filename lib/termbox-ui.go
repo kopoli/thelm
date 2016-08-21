@@ -224,6 +224,7 @@ func (u *ui) cmdToggleFilter(termbox.Key) error {
 		io.Copy(&u.view, &u.filter.buf)
 		u.input = u.filter.savedInput
 		u.cursor = u.filter.savedCursor
+		u.filter.buf.Close()
 		u.filter = nil
 	}
 	u.view.SetInputLine(u.input, u.cursor)
