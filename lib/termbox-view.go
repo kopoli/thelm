@@ -186,48 +186,23 @@ func (u *UIView) SetInputLine(line string, cursorx int) {
 	u.mutex.Unlock()
 }
 
-// MoveHighlightLine highlights a given line on the view.
-func (u *UIView) MoveHighlightLine(ydiff int) {
-	u.mutex.Lock()
-	lines := minmax(0, u.lines-1, u.sizeY-1)
-
-	u.highlightY = minmax(0, u.highlightY+ydiff, lines)
-	u.mutex.Unlock()
-}
-
-// func max(a, b int) int {
-// 	if a < b {
-// 		return b
-// 	}
-// 	return a
-// }
-
 // MoveHighlightAndView moves the highlight primarily. Can shift the view if
 // at limits.
 func (u *UIView) MoveHighlightAndView(ydiff int) {
 	u.mutex.Lock()
 
-	// lines := max(u.lines - 1, u.sizeY - 1)
 	offsety := minmax(0, u.offsetY+ydiff, u.lines-1)
 	hly := minmax(-1, u.highlightY+ydiff, u.lines-1)
 
-	// if offsety >= u.lines {
-	// 	offsety = u.lines - 1
-	// }
-
 	if hly < 0 || hly >= u.sizeY {
-		// if offsety >= 0 {
 		u.offsetY = offsety
-		// }
 		hly = minmax(0, hly, u.sizeY-1)
 	}
 
 	if hly+u.offsetY >= u.lines {
 		hly = u.lines - 1 - u.offsetY
 	}
-
 	u.highlightY = hly
-	// fmt.Println("hly", hly, "offsety", offsety, "real offsety", u.offsetY, "lines", u.lines, "sizey", u.sizeY)
 
 	u.mutex.Unlock()
 }
@@ -262,8 +237,8 @@ func (u *UIView) ViewSize() (x int, y int) {
 	return u.sizeX, u.sizeY
 }
 
-// GetDataLines returns the number of lines in the view
-func (u *UIView) GetDataLines() (ret int) {
+// GetDataLineCount returns the number of lines in the view
+func (u *UIView) GetDataLineCount() (ret int) {
 	u.mutex.Lock()
 	ret = u.lines
 	u.mutex.Unlock()

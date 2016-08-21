@@ -133,7 +133,6 @@ func (u *ui) EditInput(ev termbox.Event) error {
 type handlerFunc func(termbox.Key) error
 
 func (u *ui) moveCursor(ydiff int) error {
-	// u.view.MoveHighlightLine(ydiff)
 	u.view.MoveHighlightAndView(ydiff)
 	u.view.Flush()
 	return nil
@@ -160,13 +159,6 @@ func (u *ui) cmdSelectPgUp(termbox.Key) error {
 func (u *ui) cmdSelectPgDown(termbox.Key) error {
 	return u.moveCursorPage(1)
 }
-
-// func (u *ui) cmdToggleDebug(g *gocui.Gui, v *gocui.View) (err error) {
-// }
-
-// func (u *ui) cmdSelectLine(g *gocui.Gui, v *gocui.View) (err error) {
-
-// }
 
 func (u *ui) cmdSelectLine(termbox.Key) error {
 	return UiSelectedErr
@@ -198,7 +190,7 @@ func (u *ui) handleEventKey(key termbox.Key) (err error) {
 // Write receives data to be displayed on screen
 func (u *ui) Write(p []byte) (n int, err error) {
 	n, err = u.view.Write(p)
-	u.setStatusLine(u.view.GetDataLines())
+	u.setStatusLine(u.view.GetDataLineCount())
 	u.view.Flush()
 	return
 }
