@@ -64,6 +64,9 @@ func Cli(opts Options, argsin []string) (args []string, err error) {
 	optRelaxedRe := app.BoolOpt("relaxed-regexp r", false, "Regard input as a relaxed regexp. Implies --single-arg.")
 	optTitle := app.StringOpt("title t", progName, "Title string in UI.")
 
+	optCpuProfile := app.StringOpt("cpu-profile-file", "", "The CPU profile would be saved to this file.")
+	optMemProfile := app.StringOpt("memory-profile-file", "", "The Memory profile would be saved to this file.")
+
 	argArg := app.StringsArg("ARG", nil, "Command to be run")
 	app.Action = func() {
 		args = *argArg
@@ -85,6 +88,9 @@ func Cli(opts Options, argsin []string) (args []string, err error) {
 
 		opts.Set("default-value", *optDefault)
 		opts.Set("input-title", *optTitle)
+
+		opts.Set("cpu-profile-file", *optCpuProfile)
+		opts.Set("memory-profile-file", *optMemProfile)
 	}
 
 	err = app.Run(argsin)
