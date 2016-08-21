@@ -10,10 +10,12 @@ import (
 
 type ui struct {
 	optInputTitle      string
-	optHideInitialArgs bool
+	// optHideInitialArgs bool
 	optSingleArg       bool
 	optRelaxedRe       bool
-	optArgs            []string
+	// optArgs            []string
+
+	hiddenArgs []string
 
 	view UIView
 
@@ -73,6 +75,29 @@ func (u *ui) setStatusLine(lines int) {
 	u.view.SetStatusLine(fmt.Sprintf(" %s - %d ", u.optInputTitle, lines))
 }
 
+func (u *ui) RunCommand() {
+
+	line := u.input
+	var args []string
+
+	args = append(args, u.hiddenArgs...)
+
+	if u.optRelaxedRe {
+		line = AsRelaxedRegexp(line)
+	}
+
+	if u.optSingleArg {
+		args = append(args, line)
+	} else {
+		args = append(args, strings.Split(line, " ")...)
+	}
+
+	err := u.cmd.Run(args[0], args[1:]...)
+	if err != nil {
+		u.setStatusLine(0)
+	}
+}
+
 // Refresh updates the UI from the internal data
 func (u *ui) Refresh() {
 	// Update the input line
@@ -82,11 +107,12 @@ func (u *ui) Refresh() {
 
 	// Run the command
 	u.view.Clear()
-	args := strings.Split(u.input, " ")
-	err := u.cmd.Run(args[0], args[1:]...)
-	if err != nil {
-		u.setStatusLine(0)
-	}
+	// args := strings.Split(u.input, " ")
+	// err := u.cmd.Run(args[0], args[1:]...)
+	// if err != nil {
+	// 	u.setStatusLine(0)
+	// }
+	u.RunCommand()
 }
 
 // EditInput handles the input line manipulation
@@ -201,10 +227,17 @@ func Ui(opts Options, args []string) (ret string, err error) {
 	var u ui
 
 	u.optInputTitle = opts.Get("input-title", "thelm")
-	u.optHideInitialArgs = opts.IsSet("hide-initial-args")
+	// u.optHideInitialArgs = opts.IsSet("hide-initial-args")
 	u.optSingleArg = opts.IsSet("single-argument")
 	u.optRelaxedRe = opts.IsSet("relaxed-regexp")
-	u.optArgs = args
+	// u.optArgs = args
+
+	if opts.IsSet("hide-initial-args") {
+		u.hiddenArgs = args
+	} else {
+		u.input = strings.Join(args, " ")
+		u.cursor = len(u.input)
+	}
 
 	// Termbox setup
 	err = termbox.Init()
@@ -214,10 +247,13 @@ func Ui(opts Options, args []string) (ret string, err error) {
 	defer termbox.Close()
 	termbox.SetInputMode(termbox.InputEsc)
 
-	// Command setup and initial run
+	// Command setup
 	u.cmd.Passthrough = &u
-	u.input = strings.Join(u.optArgs, " ")
-	u.cursor = len(u.input)
+
+	// Set up the ui and initial draw
+	// u.input = strings.Join(u.optArgs, " ")
+	// u.cursor = len(u.input)
+	u.setStatusLine(0)
 	u.Refresh()
 
 	// Main loop
