@@ -52,6 +52,22 @@ func (u *ui) removeInput(count int) {
 	u.cursor = start
 }
 
+// clears the whole input string
+func (u *ui) clearInput() {
+	u.input = ""
+	u.cursor = 0
+}
+
+// removes characters up to thep previous space
+func (u *ui) backwardKillWord() {
+	lastspace := strings.LastIndex(u.input[:u.cursor], " ")
+	if lastspace < 0 {
+		lastspace = 0
+	}
+
+	u.removeInput(u.cursor - lastspace)
+}
+
 // updates the statusline
 func (u *ui) setStatusLine(lines int) {
 	u.view.SetStatusLine(fmt.Sprintf(" %s - %d ", u.optInputTitle, lines))
@@ -76,20 +92,31 @@ func (u *ui) Refresh() {
 // EditInput handles the input line manipulation
 func (u *ui) EditInput(ev termbox.Event) error {
 
+	// Visible character input
 	if ev.Ch != 0 {
 		u.addInputRune(ev.Ch)
 	} else {
-		switch ev.Key {
-		case termbox.KeyArrowLeft:
+		key := ev.Key
+		mod := ev.Mod
+
+		// Keys
+		switch {
+		case key ==termbox.KeyArrowLeft:
 			u.cursor--
-		case termbox.KeyArrowRight:
+		case key ==termbox.KeyArrowRight:
 			u.cursor++
-		case termbox.KeySpace:
+		case key ==termbox.KeySpace:
 			u.addInputRune(' ')
-		case termbox.KeyBackspace:
+		case key ==termbox.KeyBackspace:
 			u.removeInput(1)
-		case termbox.KeyBackspace2:
+		case key ==termbox.KeyBackspace2:
 			u.removeInput(1)
+		case key ==termbox.KeyCtrlU:
+			u.clearInput()
+		case (mod == termbox.ModAlt && (key == termbox.KeyBackspace ||
+			key == termbox.KeyBackspace2)) ||
+			key == termbox.KeyCtrlY:
+			u.backwardKillWord()
 		default:
 			return nil
 		}
@@ -186,16 +213,8 @@ func Ui(opts Options, args []string) (ret string, err error) {
 	defer termbox.Close()
 	termbox.SetInputMode(termbox.InputEsc)
 
-	// Testing ui.
-	// u.view.SetStatusLine(" Thelm testi ")
-	// fmt.Fprintln(&u.view, "viewtesti")
-	// fmt.Fprintln(&u.view, "Tahan toiselle riville")
-	// fmt.Fprintln(&u.view, "Kolmas rivi")
-	// u.view.Flush()
-
+	// Command setup and initial run
 	u.cmd.Passthrough = &u
-	// u.cmd.Run("ls", "-lah")
-
 	u.input = strings.Join(u.optArgs, " ")
 	u.cursor = len(u.input)
 	u.Refresh()
