@@ -155,14 +155,14 @@ func (u *UIView) Flush() {
 	}
 
 	// Draw the statusline
-	y := u.sizeY - 1
+	y := u.sizeY
 	u.fillLine(0, y, 2, coldef, coldef, '-')
 	u.drawText(2, y, coldef, coldef, u.statusLine)
 	pos := 2 + len(u.statusLine)
 	u.fillLine(pos, y, u.sizeX-pos, coldef, coldef, '-')
 
 	// Draw the input line
-	y = u.sizeY
+	y = u.sizeY + 1
 	u.drawText(0, y, coldef, coldef, u.inputLine)
 	termbox.SetCursor(u.inputCursorX, y)
 
