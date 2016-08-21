@@ -1,6 +1,9 @@
 package thelm
 
 import (
+	"bytes"
+	"fmt"
+	"io"
 	"os/exec"
 	"sync"
 )
@@ -10,14 +13,27 @@ type Command struct {
 	mutex sync.Mutex
 
 	// Callback that provides data out
-	Sync func([]byte) error
+	Passthrough io.Writer
+
+	lines    int
+	MaxLines int
 }
 
 // Data will be written to the internal buffer from another process
 func (c *Command) Write(p []byte) (n int, err error) {
-	n = len(p)
-	c.Sync(p)
-	return
+	lines := bytes.Count(p, []byte("\n"))
+	if c.MaxLines != 0 && c.lines+lines > c.MaxLines {
+		linedata := bytes.SplitN(p, []byte("\n"), -1)
+		p = bytes.Join(linedata[0:c.MaxLines-c.lines], []byte("\n"))
+		p = append(p, []byte(fmt.Sprintf("\n-- command output cut off at %d lines --\n", c.MaxLines))...)
+		lines = c.MaxLines - c.lines
+		c.Finish()
+	}
+
+	c.lines += lines
+	// n = len(p)
+	// c.Sync(p)
+	return c.Passthrough.Write(p)
 }
 
 // Finish makes sure the process has stopped
@@ -42,10 +58,11 @@ func (c *Command) Run(command string, args ...string) (err error) {
 	c.cmd = exec.Command(command, args...)
 	c.cmd.Stdout = c
 	c.cmd.Stderr = c
+	c.lines = 0
 	err = c.cmd.Start()
 	if err != nil {
 		c.cmd = nil
-		c.Sync([]byte{})
+		// c.Sync([]byte{})
 	}
 	c.mutex.Unlock()
 

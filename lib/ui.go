@@ -1,8 +1,11 @@
+// +build ignore
+
 package thelm
 
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/jroimartin/gocui"
@@ -12,7 +15,7 @@ import (
 var UiAbortedErr = E.New("User interface was aborted")
 
 type filter struct {
-	buf Buffer
+	buf   Buffer
 	input string
 }
 
@@ -197,8 +200,7 @@ func (u *ui) keybindings() (err error) {
 
 func (u *ui) Sync(p []byte) (err error) {
 	// Create a copy to prevent data race
-	data := make([]byte, len(p))
-	copy(data, p)
+	data := bytes.Replace(p, []byte("\t"), []byte("        "), -1)
 
 	u.gui.Execute(func(g *gocui.Gui) (err error) {
 		out, err := g.View("output")
@@ -235,8 +237,6 @@ func (u *ui) createLayout(g *gocui.Gui) (err error) {
 	if err == gocui.ErrUnknownView {
 		v.Highlight = true
 		err = nil
-
-		u.cmd.Sync = u.Sync
 	}
 	if err != nil {
 		return
@@ -417,6 +417,12 @@ func Ui(opts Options, args []string) (ret string, err error) {
 	}
 	defer UI.gui.Close()
 	defer UI.cmd.Finish()
+
+	UI.cmd.MaxLines, err = strconv.Atoi(opts.Get("command-max-lines", "invalid"))
+	if err != nil {
+		UI.cmd.MaxLines = 1000000
+	}
+	UI.cmd.Sync = UI.Sync
 
 	UI.gui.Editor = &UI
 	UI.gui.SelBgColor = gocui.AttrReverse

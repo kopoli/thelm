@@ -7,39 +7,73 @@ import (
 )
 
 type Buffer struct {
-	data []byte
+	// lines [][]byte
+	buffer  []byte
+	readpos int
 
 	// Callback that provides data out
-	Sync func([]byte) error
+	Passthrough io.Writer
+
+	done chan bool
 }
 
-func (b *Buffer) Push(data string) {
-	b.data = []byte(data)
-}
-
-func (b *Buffer) Pop(out io.Writer) (err error) {
-	_, err = out.Write(b.data)
+func (b *Buffer) Write(p []byte) (n int, err error) {
+	b.buffer = append(b.buffer, p...)
+	n = len(p)
 	return
 }
 
+func (b *Buffer) Read(p []byte) (n int, err error) {
+	n = copy(p, b.buffer[b.readpos:])
+	b.readpos += n
+	if b.readpos == len(b.buffer) {
+		err = io.EOF
+	}
+	return
+}
+
+func (b *Buffer) Close() (error) {
+	if b.done != nil {
+		b.done <- true
+		close(b.done)
+	}
+	return nil
+}
+
 // Filter the current Buffer with the regexp and write output to out.
-func (b *Buffer) Filter(regex string) (lines int, err error) {
+func (b *Buffer) Filter(regex string) (err error) {
 	re, err := regexp.Compile("(?i)" + AsRelaxedRegexp(regex))
 	if err != nil {
 		return
 	}
 
-	//TODO Splitting can be done in the Push phase
-	for _, line := range bytes.Split(b.data, []byte("\n")) {
-		if re.Match(line) {
-			lines += 1
-			// _, err = out.Write(append(line, '\n'))
-			err = b.Sync(append(line, '\n'))
-			if err != nil {
+	if b.done == nil {
+		b.done = make(chan bool)
+	} else {
+		b.done <- true
+	}
+
+	go func() {
+		for _, line := range bytes.Split(b.buffer, []byte("\n")) {
+			select {
+			case <-b.done:
 				return
+			default:
+			}
+			if re.Match(line) {
+				_, err = b.Passthrough.Write(append(line, '\n'))
+				if err != nil {
+					return
+				}
 			}
 		}
-	}
+
+		// Hang until the next call to Filter
+		select {
+		case <-b.done:
+		}
+		return
+	}()
 
 	return
 }
