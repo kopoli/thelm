@@ -88,9 +88,10 @@ func minmax(low int, value int, high int) int {
 func (u *UIView) Write(p []byte) (n int, err error) {
 	u.mutex.Lock()
 
-	u.lines += bytes.Count(p, []byte("\n"))
-	u.buffer = append(u.buffer, p...)
 	n = len(p)
+	u.lines += bytes.Count(p, []byte("\n"))
+	p = bytes.Replace(p, []byte("\t"), []byte("        "), -1)
+	u.buffer = append(u.buffer, p...)
 
 	u.mutex.Unlock()
 	return
