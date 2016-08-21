@@ -8,11 +8,13 @@ import (
 
 type Buffer struct {
 	// lines [][]byte
-	buffer []byte
+	buffer  []byte
 	readpos int
 
 	// Callback that provides data out
 	Passthrough io.Writer
+
+	done chan bool
 }
 
 func (b *Buffer) Write(p []byte) (n int, err error) {
@@ -32,24 +34,38 @@ func (b *Buffer) Read(p []byte) (n int, err error) {
 
 // Filter the current Buffer with the regexp and write output to out.
 func (b *Buffer) Filter(regex string) (err error) {
-	var lines int
 	re, err := regexp.Compile("(?i)" + AsRelaxedRegexp(regex))
 	if err != nil {
 		return
 	}
 
-	for _, line := range bytes.Split(b.buffer, []byte("\n")) {
-		if re.Match(line) {
-			lines += 1
-			_, err = b.Passthrough.Write(append(line, '\n'))
-			if err != nil {
-				return
-			}
-		}
+	if b.done == nil {
+		b.done = make(chan bool)
+	} else {
+		b.done <- true
 	}
 
-	if lines == 0 {
-		err = E.New("No lines matching the filter found")
-	}
+	go func() {
+		for _, line := range bytes.Split(b.buffer, []byte("\n")) {
+			select {
+			case <-b.done:
+				return
+			default:
+			}
+			if re.Match(line) {
+				_, err = b.Passthrough.Write(append(line, '\n'))
+				if err != nil {
+					return
+				}
+			}
+		}
+
+		// Hang until the next call to Filter
+		select {
+		case <-b.done:
+		}
+		return
+	}()
+
 	return
 }

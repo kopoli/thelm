@@ -87,7 +87,7 @@ func (u *ui) setStatusLine(lines int) {
 		lines))
 }
 
-func (u *ui) RunCommand() error {
+func (u *ui) RunCommand() {
 
 	line := u.input
 	var args []string
@@ -104,7 +104,10 @@ func (u *ui) RunCommand() error {
 		args = append(args, strings.Split(line, " ")...)
 	}
 
-	return u.cmd.Run(args[0], args[1:]...)
+	err := u.cmd.Run(args[0], args[1:]...)
+	if err != nil {
+		u.setStatusLine(0)
+	}
 }
 
 // Refresh updates the UI from the internal data
@@ -116,16 +119,13 @@ func (u *ui) Refresh() {
 
 	// Generate the output
 	u.view.Clear()
-	var err error
 	if u.filter != nil {
-		err = u.filter.buf.Filter(u.input)
+		u.filter.buf.Filter(u.input)
+		u.setStatusLine(0)
 	} else {
-		err = u.RunCommand()
+		u.RunCommand()
 	}
 
-	if err != nil {
-		u.setStatusLine(0)
-	}
 }
 
 // EditInput handles the input line manipulation
