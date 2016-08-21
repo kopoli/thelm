@@ -141,7 +141,7 @@ func (u *ui) EditInput(ev termbox.Event) error {
 			u.clearInput()
 		case (mod == termbox.ModAlt && (key == termbox.KeyBackspace ||
 			key == termbox.KeyBackspace2)) ||
-			key == termbox.KeyCtrlY:
+			key == termbox.KeyCtrlW:
 			u.backwardKillWord()
 		default:
 			return nil
