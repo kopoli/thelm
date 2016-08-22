@@ -54,6 +54,7 @@ func (b *Buffer) Filter(regex string) (err error) {
 	}
 
 	go func() {
+		buf := []byte{}
 		for _, line := range bytes.Split(b.buffer, []byte("\n")) {
 			select {
 			case <-b.done:
@@ -61,11 +62,13 @@ func (b *Buffer) Filter(regex string) (err error) {
 			default:
 			}
 			if re.Match(line) {
-				_, err = b.Passthrough.Write(append(line, '\n'))
-				if err != nil {
-					return
-				}
+				buf = append(buf, append(line, '\n')...)
 			}
+		}
+
+		_, err = b.Passthrough.Write(buf)
+		if err != nil {
+			return
 		}
 
 		// Hang until the next call to Filter
