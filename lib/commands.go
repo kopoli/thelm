@@ -31,8 +31,6 @@ func (c *Command) Write(p []byte) (n int, err error) {
 	}
 
 	c.lines += lines
-	// n = len(p)
-	// c.Sync(p)
 	return c.Passthrough.Write(p)
 }
 
@@ -44,6 +42,15 @@ func (c *Command) Finish() (err error) {
 	}
 	c.mutex.Unlock()
 	return
+}
+
+// Wait waits for the command to complete
+func (c *Command) Wait() {
+	c.mutex.Lock()
+	if c.cmd != nil {
+		c.cmd.Wait()
+	}
+	c.mutex.Unlock()
 }
 
 // Run given cocmmand with args
@@ -62,7 +69,6 @@ func (c *Command) Run(command string, args ...string) (err error) {
 	err = c.cmd.Start()
 	if err != nil {
 		c.cmd = nil
-		// c.Sync([]byte{})
 	}
 	c.mutex.Unlock()
 

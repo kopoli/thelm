@@ -292,6 +292,12 @@ func Ui(opts Options, args []string) (ret string, err error) {
 	u.setStatusLine(0)
 	u.Refresh()
 
+	if opts.IsSet("enable-filtering") {
+		u.cmd.Wait()
+		u.cmdToggleFilter(termbox.KeyCtrlF)
+		u.Refresh()
+	}
+
 	// Main loop
 	for {
 		switch ev := termbox.PollEvent(); ev.Type {
