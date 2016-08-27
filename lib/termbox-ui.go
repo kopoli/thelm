@@ -35,6 +35,7 @@ type ui struct {
 // UiAbortedErr tells if user wanted to abort
 var UiAbortedErr = E.New("User interface was aborted")
 
+// UiSelectedErr tells that user selected a line
 var UiSelectedErr = E.New("User selected a line")
 
 // Input line handling
@@ -242,6 +243,7 @@ func (u *ui) cmdToggleFilter(termbox.Key) error {
 func (u *ui) handleEventKey(key termbox.Key) (err error) {
 
 	keyHandlers := map[termbox.Key]handlerFunc{
+		termbox.KeyEsc:       u.cmdAbort,
 		termbox.KeyCtrlG:     u.cmdAbort,
 		termbox.KeyArrowUp:   u.cmdSelectUp,
 		termbox.KeyArrowDown: u.cmdSelectDown,
@@ -308,23 +310,18 @@ func Ui(opts Options, args []string) (ret string, err error) {
 	for {
 		switch ev := termbox.PollEvent(); ev.Type {
 		case termbox.EventKey:
-			switch ev.Key {
-			case termbox.KeyEsc:
+			err = u.handleEventKey(ev.Key)
+			if err != nil {
+				if err == UiSelectedErr {
+					err = nil
+					ret = u.view.GetHighlightLine()
+				}
 				return
-			default:
-				err = u.handleEventKey(ev.Key)
-				if err != nil {
-					if err == UiSelectedErr {
-						err = nil
-						ret = u.view.GetHighlightLine()
-					}
-					return
-				}
+			}
 
-				err = u.EditInput(ev)
-				if err != nil {
-					return
-				}
+			err = u.EditInput(ev)
+			if err != nil {
+				return
 			}
 		case termbox.EventError:
 			err = ev.Err
