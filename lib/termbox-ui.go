@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	termbox "github.com/nsf/termbox-go"
@@ -24,7 +25,8 @@ type ui struct {
 
 	view UIView
 
-	cmd Command
+	// cmd Command
+	source AsyncSource
 
 	input  string
 	cursor int
@@ -106,7 +108,7 @@ func (u *ui) RunCommand() {
 		args = append(args, strings.Split(line, " ")...)
 	}
 
-	err := u.cmd.Run(args[0], args[1:]...)
+	err := u.source.Run(args...)
 	if err != nil {
 		u.setStatusLine(0)
 	}
@@ -123,12 +125,16 @@ func (u *ui) Refresh(update bool) {
 		return
 	}
 
+	u.setStatusLine(0)
+
 	// Generate the output
-	u.view.Clear()
 	if u.filter != nil {
+		u.view.Clear()
 		u.filter.buf.Filter(u.input)
-		u.setStatusLine(0)
 	} else {
+		if !u.source.IsOneShot() {
+			u.view.Clear()
+		}
 		u.RunCommand()
 	}
 
@@ -155,7 +161,7 @@ func (u *ui) EditInput(ev termbox.Event) error {
 			update = false
 		case key == termbox.KeySpace:
 			u.addInputRune(' ')
-		case key == termbox.KeyBackspace ||  key == termbox.KeyBackspace2:
+		case key == termbox.KeyBackspace || key == termbox.KeyBackspace2:
 			u.removeInput(1)
 		case key == termbox.KeyCtrlU:
 			u.clearInput()
@@ -227,13 +233,14 @@ func (u *ui) cmdToggleFilter(termbox.Key) error {
 		u.filter.buf.Passthrough = u
 		io.Copy(&u.filter.buf, &u.view)
 	} else {
-
+		u.view.Clear()
 		io.Copy(&u.view, &u.filter.buf)
 		u.input = u.filter.savedInput
 		u.cursor = u.filter.savedCursor
 		u.filter.buf.Close()
 		u.filter = nil
 	}
+	u.setStatusLine(0)
 	u.view.SetInputLine(u.input, u.cursor)
 	u.view.Flush()
 
@@ -285,6 +292,30 @@ func Ui(opts Options, args []string) (ret string, err error) {
 		u.cursor = len(u.input)
 	}
 
+	// Set input source
+	enableFiltering := opts.IsSet("enable-filtering")
+	inputPipe := opts.IsSet("input-pipe")
+	inputFile := opts.Get("input-file", "")
+
+	if inputPipe || inputFile != "" {
+		if inputPipe {
+			u.source = &SourceReader{
+				Input: os.Stdin,
+			}
+		} else {
+			u.source = &SourceFile{
+				FileName: inputFile,
+			}
+		}
+		enableFiltering = true
+		u.input = ""
+	} else {
+		// Command setup
+		u.source = &Command{}
+	}
+
+	u.source.SetOutput(&u)
+
 	// Termbox setup
 	err = termbox.Init()
 	if err != nil {
@@ -293,15 +324,12 @@ func Ui(opts Options, args []string) (ret string, err error) {
 	defer termbox.Close()
 	termbox.SetInputMode(termbox.InputEsc)
 
-	// Command setup
-	u.cmd.Passthrough = &u
-
 	// Set up the ui and initial draw
 	u.setStatusLine(0)
 	u.Refresh(true)
 
-	if opts.IsSet("enable-filtering") {
-		u.cmd.Wait()
+	if enableFiltering {
+		u.source.Wait()
 		u.cmdToggleFilter(termbox.KeyCtrlF)
 		u.Refresh(true)
 	}

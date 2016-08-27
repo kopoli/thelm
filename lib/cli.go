@@ -63,6 +63,8 @@ func Cli(opts Options, argsin []string) (args []string, err error) {
 	optSingleArg := app.BoolOpt("s single-arg", false, "Regard input given in the UI as a single argument to the program.")
 	optRelaxedRe := app.BoolOpt("r relaxed-regexp", false, "Regard input as a relaxed regexp. Implies --single-arg.")
 	optTitle := app.StringOpt("t title", progName, "Title string in UI.")
+	optFile := app.StringOpt("F file", "", "The file which will be read instead of running a command.")
+	optPipe := app.BoolOpt("P pipe", false, "The data will be read through a pipe.")
 
 	optCpuProfile := app.StringOpt("cpu-profile-file", "", "The CPU profile would be saved to this file.")
 	optMemProfile := app.StringOpt("memory-profile-file", "", "The Memory profile would be saved to this file.")
@@ -84,6 +86,11 @@ func Cli(opts Options, argsin []string) (args []string, err error) {
 		}
 		if *optRelaxedRe {
 			opts.Set("relaxed-regexp", "t")
+		}
+
+		opts.Set("input-file", *optFile)
+		if *optPipe {
+			opts.Set("input-pipe", "t")
 		}
 
 		opts.Set("default-value", *optDefault)

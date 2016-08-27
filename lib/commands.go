@@ -4,19 +4,102 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"sync"
 )
 
+type AsyncSource interface {
+	Run(...string) error
+	Wait()
+	Finish() error
+
+	IsOneShot() bool
+
+	// Set callback that provides data out
+	SetOutput(io.Writer)
+}
+
+type Source struct {
+	mutex  sync.Mutex
+	output io.Writer
+}
+
+func (s *Source) SetOutput(p io.Writer) {
+	s.output = p
+}
+
+type SourceReader struct {
+	Input  io.Reader
+	wg     sync.WaitGroup
+	isRead bool
+
+	Source
+}
+
+func (r *SourceReader) IsOneShot() bool {
+	return true
+}
+
+func (r *SourceReader) Run(...string) error {
+	r.Wait()
+
+	go func() {
+		r.mutex.Lock()
+		if r.isRead {
+			r.mutex.Unlock()
+			return
+		}
+		r.wg.Add(1)
+		io.Copy(r.output, r.Input)
+		r.isRead = true
+		r.wg.Done()
+		r.mutex.Unlock()
+	}()
+	return nil
+}
+
+func (r *SourceReader) Finish() error {
+	r.Wait()
+	return nil
+}
+
+func (r *SourceReader) Wait() {
+	r.wg.Wait()
+}
+
+type SourceFile struct {
+	FileName string
+
+	SourceReader
+}
+
+func (f *SourceFile) Run(args ...string) (err error) {
+	var file *os.File
+	file, err = os.Open(f.FileName)
+	if err != nil {
+		err = E.Annotate(err, "Could not open file to read")
+		return
+	}
+	f.Input = file
+	err = f.SourceReader.Run(args...)
+	return
+}
+
+func (f *SourceFile) Wait() {
+	f.SourceReader.Wait()
+	if f.Input != nil {
+		f.Input.(*os.File).Close()
+	}
+}
+
 type Command struct {
-	cmd   *exec.Cmd
-	mutex sync.Mutex
-
-	// Callback that provides data out
-	Passthrough io.Writer
-
+	cmd      *exec.Cmd
 	lines    int
 	MaxLines int
+
+	Source
+	io.Writer
 }
 
 // Data will be written to the internal buffer from another process
@@ -31,7 +114,7 @@ func (c *Command) Write(p []byte) (n int, err error) {
 	}
 
 	c.lines += lines
-	return c.Passthrough.Write(p)
+	return c.output.Write(p)
 }
 
 // Finish makes sure the process has stopped
@@ -53,16 +136,16 @@ func (c *Command) Wait() {
 	c.mutex.Unlock()
 }
 
-// Run given cocmmand with args
-func (c *Command) Run(command string, args ...string) (err error) {
+// Run given command with args
+func (c *Command) Run(args ...string) (err error) {
 	c.Finish()
 
-	if command == "" {
+	if len(args) == 0 || args[0] == "" {
 		return
 	}
 
 	c.mutex.Lock()
-	c.cmd = exec.Command(command, args...)
+	c.cmd = exec.Command(args[0], args[1:]...)
 	c.cmd.Stdout = c
 	c.cmd.Stderr = c
 	c.lines = 0
@@ -73,4 +156,8 @@ func (c *Command) Run(command string, args ...string) (err error) {
 	c.mutex.Unlock()
 
 	return
+}
+
+func (c *Command) IsOneShot() bool {
+	return false
 }
