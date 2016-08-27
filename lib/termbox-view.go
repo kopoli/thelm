@@ -72,16 +72,6 @@ func (u *UIView) updateViewSize() {
 	u.sizeY -= 2
 }
 
-// return the value between low and high inclusive
-func minmax(low int, value int, high int) int {
-	if value < low {
-		return low
-	} else if value > high {
-		return high
-	}
-	return value
-}
-
 // The public interface
 
 // Write writes the given data to the view. This can be called from anywhere.
