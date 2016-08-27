@@ -87,6 +87,7 @@ func (u *ui) setStatusLine(lines int) {
 		lines))
 }
 
+// Runs the command that has been stored in input and hiddenArgs
 func (u *ui) RunCommand() {
 
 	line := u.input
@@ -111,11 +112,15 @@ func (u *ui) RunCommand() {
 }
 
 // Refresh updates the UI from the internal data
-func (u *ui) Refresh() {
+func (u *ui) Refresh(update bool) {
 	// Update the input line
 	u.cursor = minmax(0, u.cursor, len(u.input))
 	u.view.SetInputLine(u.input, u.cursor)
 	u.view.Flush()
+
+	if !update {
+		return
+	}
 
 	// Generate the output
 	u.view.Clear()
@@ -130,6 +135,7 @@ func (u *ui) Refresh() {
 
 // EditInput handles the input line manipulation
 func (u *ui) EditInput(ev termbox.Event) error {
+	update := true
 
 	// Visible character input
 	if ev.Ch != 0 {
@@ -142,13 +148,13 @@ func (u *ui) EditInput(ev termbox.Event) error {
 		switch {
 		case key == termbox.KeyArrowLeft:
 			u.cursor--
+			update = false
 		case key == termbox.KeyArrowRight:
 			u.cursor++
+			update = false
 		case key == termbox.KeySpace:
 			u.addInputRune(' ')
-		case key == termbox.KeyBackspace:
-			u.removeInput(1)
-		case key == termbox.KeyBackspace2:
+		case key == termbox.KeyBackspace ||  key == termbox.KeyBackspace2:
 			u.removeInput(1)
 		case key == termbox.KeyCtrlU:
 			u.clearInput()
@@ -161,7 +167,7 @@ func (u *ui) EditInput(ev termbox.Event) error {
 		}
 	}
 
-	u.Refresh()
+	u.Refresh(update)
 
 	return nil
 }
@@ -290,12 +296,12 @@ func Ui(opts Options, args []string) (ret string, err error) {
 
 	// Set up the ui and initial draw
 	u.setStatusLine(0)
-	u.Refresh()
+	u.Refresh(true)
 
 	if opts.IsSet("enable-filtering") {
 		u.cmd.Wait()
 		u.cmdToggleFilter(termbox.KeyCtrlF)
-		u.Refresh()
+		u.Refresh(true)
 	}
 
 	// Main loop
