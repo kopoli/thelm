@@ -19,6 +19,7 @@ func createProfileFile(outfile string) (fp *os.File, err error) {
 	return fp, err
 }
 
+// Setup the empty profiler with Options
 func (p *Profiler) Setup(opts Options) (err error) {
 	p.cpuFile = opts.Get("cpu-profile-file", "")
 	p.memoryFile = opts.Get("memory-profile-file", "")
@@ -36,6 +37,8 @@ func (p *Profiler) Setup(opts Options) (err error) {
 	return
 }
 
+// Close finishes the creation of the profile. Should be defer'd after running
+// Setup
 func (p *Profiler) Close() (err error) {
 	if p.cpuFile != "" {
 		pprof.StopCPUProfile()

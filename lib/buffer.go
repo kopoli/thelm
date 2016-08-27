@@ -7,7 +7,6 @@ import (
 )
 
 type Buffer struct {
-	// lines [][]byte
 	buffer  []byte
 	readpos int
 
@@ -17,12 +16,14 @@ type Buffer struct {
 	done chan bool
 }
 
+// Write satisfies io.Writer. Writes data into the buffer.
 func (b *Buffer) Write(p []byte) (n int, err error) {
 	b.buffer = append(b.buffer, p...)
 	n = len(p)
 	return
 }
 
+// Read satisfies io.Reader. Reads data from the buffer.
 func (b *Buffer) Read(p []byte) (n int, err error) {
 	n = copy(p, b.buffer[b.readpos:])
 	b.readpos += n
@@ -32,6 +33,7 @@ func (b *Buffer) Read(p []byte) (n int, err error) {
 	return
 }
 
+// Close  makes sure the asynchronous filtering is really stopped
 func (b *Buffer) Close() (error) {
 	if b.done != nil {
 		b.done <- true
