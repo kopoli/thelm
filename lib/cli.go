@@ -57,12 +57,12 @@ func Cli(opts Options, argsin []string) (args []string, err error) {
 		progName, progVersion, runtime.Compiler, runtime.Version(),
 		runtime.GOOS, runtime.GOARCH))
 
-	optFilter := app.BoolOpt("filter f", false, "Start filtering after running command.")
-	optDefault := app.StringOpt("default d", "", "The default argument that will be printed out if aborted.")
-	optHide := app.BoolOpt("hide-initial i", false, "Hide command given at the command line.")
-	optSingleArg := app.BoolOpt("single-arg s", false, "Regard input given in the UI as a single argument to the program.")
-	optRelaxedRe := app.BoolOpt("relaxed-regexp r", false, "Regard input as a relaxed regexp. Implies --single-arg.")
-	optTitle := app.StringOpt("title t", progName, "Title string in UI.")
+	optFilter := app.BoolOpt("f filter", false, "Start filtering after running command.")
+	optDefault := app.StringOpt("d default", "", "The default argument that will be printed out if aborted.")
+	optHide := app.BoolOpt("i hide-initial", false, "Hide command given at the command line.")
+	optSingleArg := app.BoolOpt("s single-arg", false, "Regard input given in the UI as a single argument to the program.")
+	optRelaxedRe := app.BoolOpt("r relaxed-regexp", false, "Regard input as a relaxed regexp. Implies --single-arg.")
+	optTitle := app.StringOpt("t title", progName, "Title string in UI.")
 
 	optCpuProfile := app.StringOpt("cpu-profile-file", "", "The CPU profile would be saved to this file.")
 	optMemProfile := app.StringOpt("memory-profile-file", "", "The Memory profile would be saved to this file.")
