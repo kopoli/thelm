@@ -233,8 +233,10 @@ func (u *ui) cmdToggleFilter(termbox.Key) error {
 		u.filter.buf.Passthrough = u
 		io.Copy(&u.filter.buf, &u.view)
 	} else {
+		_, line := u.view.GetHighlightLine()
 		u.view.Clear()
 		io.Copy(&u.view, &u.filter.buf)
+		u.view.MoveHighlightAndView(u.filter.buf.GetRealLine(line))
 		u.input = u.filter.savedInput
 		u.cursor = u.filter.savedCursor
 		u.filter.buf.Close()
@@ -342,7 +344,7 @@ func Ui(opts Options, args []string) (ret string, err error) {
 			if err != nil {
 				if err == UiSelectedErr {
 					err = nil
-					ret = u.view.GetHighlightLine()
+					ret, _ = u.view.GetHighlightLine()
 				}
 				return
 			}

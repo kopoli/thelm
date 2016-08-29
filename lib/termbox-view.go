@@ -213,9 +213,9 @@ func (u *UIView) MoveHighlightAndView(ydiff int) {
 	u.mutex.Unlock()
 }
 
-// GetHighlightLine returns the string from the view buffer that is currently
-// highlighted
-func (u *UIView) GetHighlightLine() string {
+// GetHighlightLine returns the string and the line from the view buffer that
+// is currently highlighted
+func (u *UIView) GetHighlightLine() (string, int) {
 	u.mutex.Lock()
 
 	start := u.lineToByteOffset(u.highlightY)
@@ -224,7 +224,7 @@ func (u *UIView) GetHighlightLine() string {
 	ret := string(u.buffer[start:stop])
 
 	u.mutex.Unlock()
-	return ret
+	return ret, u.highlightY
 }
 
 // ShiftView shifts the view by given difference in the data

@@ -8,6 +8,7 @@ import (
 
 type Buffer struct {
 	buffer  []byte
+	lines   []int
 	readpos int
 
 	// Callback that provides data out
@@ -34,12 +35,18 @@ func (b *Buffer) Read(p []byte) (n int, err error) {
 }
 
 // Close  makes sure the asynchronous filtering is really stopped
-func (b *Buffer) Close() (error) {
+func (b *Buffer) Close() error {
 	if b.done != nil {
 		b.done <- true
 		close(b.done)
 	}
 	return nil
+}
+
+// GetRealLine gets the original buffer line for the given line in the filtered output
+func (b *Buffer) GetRealLine(line int) (realLine int) {
+	line = minmax(0, line, len(b.lines) - 1)
+	return b.lines[line]
 }
 
 // Filter the current Buffer with the regexp and write output to out.
@@ -55,9 +62,11 @@ func (b *Buffer) Filter(regex string) (err error) {
 		b.done <- true
 	}
 
+	b.lines = nil
+
 	go func() {
 		buf := []byte{}
-		for _, line := range bytes.Split(b.buffer, []byte("\n")) {
+		for i, line := range bytes.Split(b.buffer, []byte("\n")) {
 			select {
 			case <-b.done:
 				return
@@ -65,6 +74,7 @@ func (b *Buffer) Filter(regex string) (err error) {
 			}
 			if re.Match(line) {
 				buf = append(buf, append(line, '\n')...)
+				b.lines = append(b.lines, i)
 			}
 		}
 
