@@ -30,9 +30,10 @@ func (s *Source) SetOutput(p io.Writer) {
 }
 
 type SourceReader struct {
-	Input  io.Reader
-	wg     sync.WaitGroup
-	isRead bool
+	Input     io.Reader
+	wg        sync.WaitGroup
+	isRead    bool
+	sourceErr error
 
 	Source
 }
@@ -44,14 +45,17 @@ func (r *SourceReader) IsOneShot() bool {
 func (r *SourceReader) Run(...string) error {
 	r.Wait()
 
+	r.mutex.Lock()
+	if r.isRead {
+		r.mutex.Unlock()
+		return nil
+	}
+	r.mutex.Unlock()
+	r.wg.Add(1)
+
 	go func() {
 		r.mutex.Lock()
-		if r.isRead {
-			r.mutex.Unlock()
-			return
-		}
-		r.wg.Add(1)
-		io.Copy(r.output, r.Input)
+		_, r.sourceErr = io.Copy(r.output, r.Input)
 		r.isRead = true
 		r.wg.Done()
 		r.mutex.Unlock()
@@ -59,9 +63,12 @@ func (r *SourceReader) Run(...string) error {
 	return nil
 }
 
-func (r *SourceReader) Finish() error {
+func (r *SourceReader) Finish() (err error) {
 	r.Wait()
-	return nil
+	r.mutex.Lock()
+	err = r.sourceErr
+	r.mutex.Unlock()
+	return
 }
 
 func (r *SourceReader) Wait() {
