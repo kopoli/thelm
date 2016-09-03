@@ -234,12 +234,9 @@ func (u *ui) cmdToggleFilter(termbox.Key) error {
 		io.Copy(&u.filter.buf, &u.view)
 	} else {
 		_, line := u.view.GetHighlightLine()
-		line = u.filter.buf.GetRealLine(line)
 		u.view.Clear()
 		io.Copy(&u.view, &u.filter.buf)
-		if line > 0 {
-			u.view.MoveHighlightAndView(line)
-		}
+		u.view.MoveHighlightAndView(u.filter.buf.GetRealLine(line))
 		u.input = u.filter.savedInput
 		u.cursor = u.filter.savedCursor
 		u.filter.buf.Close()

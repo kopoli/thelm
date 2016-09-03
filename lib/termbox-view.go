@@ -202,7 +202,7 @@ func (u *UIView) MoveHighlightAndView(ydiff int) {
 
 	if hly < 0 || hly >= u.sizeY {
 		u.offsetY = offsety
-		hly = 0
+		hly = minmax(0, hly, u.sizeY-1)
 	}
 
 	if hly+u.offsetY >= u.lines {

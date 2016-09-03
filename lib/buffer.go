@@ -44,11 +44,8 @@ func (b *Buffer) Close() error {
 }
 
 // GetRealLine gets the original buffer line for the given line in the filtered output
-func (b *Buffer) GetRealLine(line int) int {
-	if len(b.lines) == 0 {
-		return -1
-	}
-	line = minmax(0, line, len(b.lines)-1)
+func (b *Buffer) GetRealLine(line int) (realLine int) {
+	line = minmax(0, line, len(b.lines) - 1)
 	return b.lines[line]
 }
 
@@ -81,7 +78,10 @@ func (b *Buffer) Filter(regex string) (err error) {
 			}
 		}
 
-		_, _ = b.Passthrough.Write(buf)
+		_, err = b.Passthrough.Write(buf)
+		if err != nil {
+			return
+		}
 
 		// Hang until the next call to Filter
 		select {
