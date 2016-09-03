@@ -72,16 +72,6 @@ func (u *UIView) updateViewSize() {
 	u.sizeY -= 2
 }
 
-// return the value between low and high inclusive
-func minmax(low int, value int, high int) int {
-	if value < low {
-		return low
-	} else if value > high {
-		return high
-	}
-	return value
-}
-
 // The public interface
 
 // Write writes the given data to the view. This can be called from anywhere.
@@ -223,18 +213,18 @@ func (u *UIView) MoveHighlightAndView(ydiff int) {
 	u.mutex.Unlock()
 }
 
-// GetHighlightLine returns the string from the view buffer that is currently
-// highlighted
-func (u *UIView) GetHighlightLine() string {
+// GetHighlightLine returns the string and the line from the view buffer that
+// is currently highlighted
+func (u *UIView) GetHighlightLine() (string, int) {
 	u.mutex.Lock()
 
 	start := u.lineToByteOffset(u.highlightY)
-	stop := u.nextLineOffset(start)
+	stop := u.nextLineOffset(start) - 1
 
 	ret := string(u.buffer[start:stop])
 
 	u.mutex.Unlock()
-	return ret
+	return ret, u.highlightY
 }
 
 // ShiftView shifts the view by given difference in the data

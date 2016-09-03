@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	termbox "github.com/nsf/termbox-go"
@@ -24,7 +25,8 @@ type ui struct {
 
 	view UIView
 
-	cmd Command
+	// cmd Command
+	source AsyncSource
 
 	input  string
 	cursor int
@@ -35,6 +37,7 @@ type ui struct {
 // UiAbortedErr tells if user wanted to abort
 var UiAbortedErr = E.New("User interface was aborted")
 
+// UiSelectedErr tells that user selected a line
 var UiSelectedErr = E.New("User selected a line")
 
 // Input line handling
@@ -87,6 +90,7 @@ func (u *ui) setStatusLine(lines int) {
 		lines))
 }
 
+// Runs the command that has been stored in input and hiddenArgs
 func (u *ui) RunCommand() {
 
 	line := u.input
@@ -104,25 +108,33 @@ func (u *ui) RunCommand() {
 		args = append(args, strings.Split(line, " ")...)
 	}
 
-	err := u.cmd.Run(args[0], args[1:]...)
+	err := u.source.Run(args...)
 	if err != nil {
 		u.setStatusLine(0)
 	}
 }
 
 // Refresh updates the UI from the internal data
-func (u *ui) Refresh() {
+func (u *ui) Refresh(update bool) {
 	// Update the input line
 	u.cursor = minmax(0, u.cursor, len(u.input))
 	u.view.SetInputLine(u.input, u.cursor)
 	u.view.Flush()
 
+	if !update {
+		return
+	}
+
+	u.setStatusLine(0)
+
 	// Generate the output
-	u.view.Clear()
 	if u.filter != nil {
+		u.view.Clear()
 		u.filter.buf.Filter(u.input)
-		u.setStatusLine(0)
 	} else {
+		if !u.source.IsOneShot() {
+			u.view.Clear()
+		}
 		u.RunCommand()
 	}
 
@@ -130,6 +142,7 @@ func (u *ui) Refresh() {
 
 // EditInput handles the input line manipulation
 func (u *ui) EditInput(ev termbox.Event) error {
+	update := true
 
 	// Visible character input
 	if ev.Ch != 0 {
@@ -142,13 +155,13 @@ func (u *ui) EditInput(ev termbox.Event) error {
 		switch {
 		case key == termbox.KeyArrowLeft:
 			u.cursor--
+			update = false
 		case key == termbox.KeyArrowRight:
 			u.cursor++
+			update = false
 		case key == termbox.KeySpace:
 			u.addInputRune(' ')
-		case key == termbox.KeyBackspace:
-			u.removeInput(1)
-		case key == termbox.KeyBackspace2:
+		case key == termbox.KeyBackspace || key == termbox.KeyBackspace2:
 			u.removeInput(1)
 		case key == termbox.KeyCtrlU:
 			u.clearInput()
@@ -161,7 +174,7 @@ func (u *ui) EditInput(ev termbox.Event) error {
 		}
 	}
 
-	u.Refresh()
+	u.Refresh(update)
 
 	return nil
 }
@@ -220,13 +233,16 @@ func (u *ui) cmdToggleFilter(termbox.Key) error {
 		u.filter.buf.Passthrough = u
 		io.Copy(&u.filter.buf, &u.view)
 	} else {
-
+		_, line := u.view.GetHighlightLine()
+		u.view.Clear()
 		io.Copy(&u.view, &u.filter.buf)
+		u.view.MoveHighlightAndView(u.filter.buf.GetRealLine(line))
 		u.input = u.filter.savedInput
 		u.cursor = u.filter.savedCursor
 		u.filter.buf.Close()
 		u.filter = nil
 	}
+	u.setStatusLine(0)
 	u.view.SetInputLine(u.input, u.cursor)
 	u.view.Flush()
 
@@ -236,6 +252,7 @@ func (u *ui) cmdToggleFilter(termbox.Key) error {
 func (u *ui) handleEventKey(key termbox.Key) (err error) {
 
 	keyHandlers := map[termbox.Key]handlerFunc{
+		termbox.KeyEsc:       u.cmdAbort,
 		termbox.KeyCtrlG:     u.cmdAbort,
 		termbox.KeyArrowUp:   u.cmdSelectUp,
 		termbox.KeyArrowDown: u.cmdSelectDown,
@@ -277,6 +294,30 @@ func Ui(opts Options, args []string) (ret string, err error) {
 		u.cursor = len(u.input)
 	}
 
+	// Set input source
+	enableFiltering := opts.IsSet("enable-filtering")
+	inputPipe := opts.IsSet("input-pipe")
+	inputFile := opts.Get("input-file", "")
+
+	if inputPipe || inputFile != "" {
+		if inputPipe {
+			u.source = &SourceReader{
+				Input: os.Stdin,
+			}
+		} else {
+			u.source = &SourceFile{
+				FileName: inputFile,
+			}
+		}
+		enableFiltering = true
+		u.input = ""
+	} else {
+		// Command setup
+		u.source = &Command{}
+	}
+
+	u.source.SetOutput(&u)
+
 	// Termbox setup
 	err = termbox.Init()
 	if err != nil {
@@ -285,34 +326,32 @@ func Ui(opts Options, args []string) (ret string, err error) {
 	defer termbox.Close()
 	termbox.SetInputMode(termbox.InputEsc)
 
-	// Command setup
-	u.cmd.Passthrough = &u
-
 	// Set up the ui and initial draw
 	u.setStatusLine(0)
-	u.Refresh()
+	u.Refresh(true)
+
+	if enableFiltering {
+		u.source.Wait()
+		u.cmdToggleFilter(termbox.KeyCtrlF)
+		u.Refresh(true)
+	}
 
 	// Main loop
 	for {
 		switch ev := termbox.PollEvent(); ev.Type {
 		case termbox.EventKey:
-			switch ev.Key {
-			case termbox.KeyEsc:
+			err = u.handleEventKey(ev.Key)
+			if err != nil {
+				if err == UiSelectedErr {
+					err = nil
+					ret, _ = u.view.GetHighlightLine()
+				}
 				return
-			default:
-				err = u.handleEventKey(ev.Key)
-				if err != nil {
-					if err == UiSelectedErr {
-						err = nil
-						ret = u.view.GetHighlightLine()
-					}
-					return
-				}
+			}
 
-				err = u.EditInput(ev)
-				if err != nil {
-					return
-				}
+			err = u.EditInput(ev)
+			if err != nil {
+				return
 			}
 		case termbox.EventError:
 			err = ev.Err
