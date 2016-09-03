@@ -86,7 +86,7 @@ Concepts:
 **Warning**: This is still alpha version, so the key bindings might yet change.
 
 | Key    | Function                                           |
-|--------+----------------------------------------------------|
+|--------|----------------------------------------------------|
 | ESC    | Abort.                                             |
 | C-g    | Abort.                                             |
 | up     | Select previous item.                              |
