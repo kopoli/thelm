@@ -34,7 +34,8 @@ release() {
                 compile
             ) || exit 1
             test "$os" = "windows" && suffix=".exe"
-            zip -9 $prog-$version-$arch-$os.zip $prog$suffix $extra_files
+            bsdtar --format zip -s ",^,$prog-$version-$arch-$os/," -cf $prog-$version-$arch-$os.zip \
+                   $prog$suffix $extra_files
             done
     done
 }
