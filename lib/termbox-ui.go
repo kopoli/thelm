@@ -46,9 +46,11 @@ var UiSelectedErr = E.New("User selected a line")
 func (u *ui) addInputRune(ch rune) {
 	var buf bytes.Buffer
 
-	buf.WriteString(u.input[:u.cursor])
+	input := []rune(u.input)
+
+	buf.WriteString(string(input[:u.cursor]))
 	buf.WriteRune(ch)
-	buf.WriteString(u.input[u.cursor:])
+	buf.WriteString(string(input[u.cursor:]))
 	u.cursor++
 	u.input = buf.String()
 }
@@ -57,9 +59,11 @@ func (u *ui) addInputRune(ch rune) {
 func (u *ui) removeInput(count int) {
 	var buf bytes.Buffer
 
-	start := minmax(0, u.cursor-count, len(u.input))
-	buf.WriteString(u.input[:start])
-	buf.WriteString(u.input[u.cursor:])
+	input := []rune(u.input)
+
+	start := minmax(0, u.cursor-count, len(input))
+	buf.WriteString(string(input[:start]))
+	buf.WriteString(string(input[u.cursor:]))
 	u.input = buf.String()
 	u.cursor = start
 }
