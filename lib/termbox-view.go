@@ -51,27 +51,6 @@ func (u *UIView) startLineOffset() (offset int) {
 	return u.lineToByteOffset(u.offsetY)
 }
 
-// draws a string on screen
-func (u *UIView) drawText(x, y int, fg, bg termbox.Attribute, text string) {
-	for _, ch := range text {
-		termbox.SetCell(x, y, ch, fg, bg)
-		x++
-	}
-}
-
-// fills a line on screen with given cell
-func (u *UIView) fillLine(x, y, w int, fg, bg termbox.Attribute, ch rune) {
-	for pos := 0; pos < w; pos++ {
-		termbox.SetCell(x+pos, y, ch, fg, bg)
-	}
-}
-
-// update the view size which is the screen minus the input and the data lines
-func (u *UIView) updateViewSize() {
-	u.sizeX, u.sizeY = termbox.Size()
-	u.sizeY -= 2
-}
-
 // The public interface
 
 // Write writes the given data to the view. This can be called from anywhere.
@@ -112,6 +91,30 @@ func (u *UIView) Clear() {
 	u.ShiftView(0, 0)
 }
 
+// Termbox drawing functionality
+
+// update the view size which is the screen minus the input and the data lines
+func (u *UIView) updateViewSize() {
+	u.sizeX, u.sizeY = termbox.Size()
+	u.sizeY -= 2
+}
+
+// draws a string on screen
+func (u *UIView) drawText(x, y int, fg, bg termbox.Attribute, text string) {
+	for _, ch := range text {
+		termbox.SetCell(x, y, ch, fg, bg)
+		x++
+	}
+}
+
+// fills a line on screen with given cell
+func (u *UIView) fillLine(x, y, w int, fg, bg termbox.Attribute, ch rune) {
+	for pos := 0; pos < w; pos++ {
+		termbox.SetCell(x+pos, y, ch, fg, bg)
+	}
+}
+
+
 // Flush updates the whole screen
 func (u *UIView) Flush() {
 	u.mutex.Lock()
@@ -129,8 +132,7 @@ func (u *UIView) Flush() {
 			pos += u.startLineOffset()
 		}
 
-		fg := coldef
-		bg := coldef
+		var fg, bg termbox.Attribute
 
 		// Draw the buffer text on screen
 		for y := 0; y < u.sizeY; y++ {
