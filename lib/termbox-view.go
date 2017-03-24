@@ -88,7 +88,6 @@ func (u *UIView) Clear() {
 	u.offsetX = 0
 	u.offsetY = 0
 	u.mutex.Unlock()
-	u.ShiftView(0, 0)
 }
 
 // Termbox drawing functionality
@@ -227,14 +226,6 @@ func (u *UIView) GetHighlightLine() (string, int) {
 
 	u.mutex.Unlock()
 	return ret, u.highlightY
-}
-
-// ShiftView shifts the view by given difference in the data
-func (u *UIView) ShiftView(x int, y int) {
-	u.mutex.Lock()
-	u.offsetX = x
-	u.offsetY = y
-	u.mutex.Unlock()
 }
 
 // ViewSize returns the size of the view
