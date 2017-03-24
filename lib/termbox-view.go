@@ -219,7 +219,7 @@ func (u *UIView) MoveHighlightAndView(ydiff int) {
 func (u *UIView) GetHighlightLine() (string, int) {
 	u.mutex.Lock()
 
-	start := u.lineToByteOffset(u.highlightY)
+	start := u.lineToByteOffset(u.offsetY + u.highlightY)
 	stop := u.nextLineOffset(start) - 1
 
 	ret := string(u.buffer[start:stop])
