@@ -260,6 +260,8 @@ func (u *ui) handleEventKey(key termbox.Key) (err error) {
 		termbox.KeyCtrlG:     u.cmdAbort,
 		termbox.KeyArrowUp:   u.cmdSelectUp,
 		termbox.KeyArrowDown: u.cmdSelectDown,
+		termbox.KeyCtrlP:     u.cmdSelectUp,
+		termbox.KeyCtrlN:     u.cmdSelectDown,
 		termbox.KeyPgdn:      u.cmdSelectPgDown,
 		termbox.KeyPgup:      u.cmdSelectPgUp,
 		termbox.KeyEnter:     u.cmdSelectLine,
