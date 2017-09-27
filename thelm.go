@@ -3,15 +3,17 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/kopoli/thelm/lib"
 )
 
 var (
-	majorVersion = "0"
-	version      = "Undefined"
-	progVersion  = majorVersion + "-" + version
+	majorVersion     = "0"
+	version          = "Undefined"
+	progVersion      = majorVersion + "-" + version
+	exitValue    int = 0
 )
 
 func printErr(err error, message string, arg ...string) {
@@ -24,14 +26,21 @@ func printErr(err error, message string, arg ...string) {
 
 func fault(err error, message string, arg ...string) {
 	printErr(err, message, arg...)
-	os.Exit(1)
+
+	// Exit goroutine and run all deferrals
+	exitValue = 1
+	runtime.Goexit()
 }
 
 func main() {
 	opts := thelm.GetOptions()
 	opts.Set("program-name", os.Args[0])
 	opts.Set("program-version", progVersion)
-        retCode := 0
+
+	// In the last deferred function, exit the program with given code
+	defer func() {
+		os.Exit(exitValue)
+	}()
 
 	args, err := thelm.Cli(opts, os.Args)
 	if err != nil {
@@ -46,7 +55,6 @@ func main() {
 	}
 	defer func() {
 		profiler.Close()
-		os.Exit(retCode)
 	}()
 
 	err = thelm.CheckSelfRunning(opts)
@@ -60,7 +68,7 @@ func main() {
 		if defval != "" {
 			fmt.Println(defval)
 		}
-		retCode = 1
+		exitValue = 1
 		return
 	}
 	if err != nil {
