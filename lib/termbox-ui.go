@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	util "github.com/kopoli/go-util"
 	termbox "github.com/nsf/termbox-go"
 )
 
@@ -285,7 +286,7 @@ func (u *ui) Write(p []byte) (n int, err error) {
 }
 
 // Ui runs the user interface that selects the line from input
-func Ui(opts Options, args []string) (ret string, err error) {
+func Ui(opts util.Options, args []string) (ret string, err error) {
 
 	var u ui
 

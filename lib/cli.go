@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/jawher/mow.cli"
+	util "github.com/kopoli/go-util"
 )
 
 // hideHelp hides the -h or --help argument if it appears after the -- argument
@@ -44,7 +45,7 @@ func unhideHelp(args []string) []string {
 	return args
 }
 
-func Cli(opts Options, argsin []string) (args []string, err error) {
+func Cli(opts util.Options, argsin []string) (args []string, err error) {
 	progName := opts.Get("program-name", "thelm")
 	progVersion := opts.Get("program-version", "undefined")
 	app := cli.App(progName, "Helm for terminal")
