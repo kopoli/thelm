@@ -96,8 +96,8 @@ func Cli(opts Options, argsin []string) (args []string, err error) {
 		opts.Set("default-value", *optDefault)
 		opts.Set("input-title", *optTitle)
 
-		opts.Set("cpu-profile-file", *optCpuProfile)
-		opts.Set("memory-profile-file", *optMemProfile)
+		opts.Set("profile-cpu-file", *optCpuProfile)
+		opts.Set("profile-mem-file", *optMemProfile)
 	}
 
 	err = app.Run(argsin)
