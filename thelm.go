@@ -13,6 +13,7 @@ import (
 var (
 	majorVersion     = "0"
 	version          = "Undefined"
+	timestamp        = "Undefined"
 	progVersion      = majorVersion + "-" + version
 	exitValue    int = 0
 )
@@ -37,6 +38,7 @@ func main() {
 	opts := util.NewOptions()
 	opts.Set("program-name", os.Args[0])
 	opts.Set("program-version", progVersion)
+	opts.Set("program-timestamp", timestamp)
 
 	// In the last deferred function, exit the program with given code
 	defer func() {

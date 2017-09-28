@@ -1,8 +1,6 @@
 package thelm
 
 import (
-	"fmt"
-	"runtime"
 	"strings"
 
 	"github.com/jawher/mow.cli"
@@ -47,16 +45,13 @@ func unhideHelp(args []string) []string {
 
 func Cli(opts util.Options, argsin []string) (args []string, err error) {
 	progName := opts.Get("program-name", "thelm")
-	progVersion := opts.Get("program-version", "undefined")
 	app := cli.App(progName, "Helm for terminal")
 
 	hidden, argsin := hideHelp(argsin)
 
 	app.Spec = "[OPTIONS] [-- ARG...]"
 
-	app.Version("version v", fmt.Sprintf("%s: %s\nBuilt with: %s/%s on %s/%s",
-		progName, progVersion, runtime.Compiler, runtime.Version(),
-		runtime.GOOS, runtime.GOARCH))
+	app.Version("version v", util.VersionString(opts))
 
 	optFilter := app.BoolOpt("f filter", false, "Start filtering after running command.")
 	optDefault := app.StringOpt("d default", "", "The default argument that will be printed out if aborted.")
