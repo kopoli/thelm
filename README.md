@@ -85,16 +85,16 @@ Concepts:
 
 **Warning**: This is still alpha version, so the key bindings might yet change.
 
-| Key    | Function                                           |
-|--------|----------------------------------------------------|
-| ESC    | Abort.                                             |
-| C-g    | Abort.                                             |
-| up     | Select previous item.                              |
-| down   | Select next item.                                  |
-| pgup   | Move focus backward a screenful.                   |
-| pgdown | Move focus forward a screenful.                    |
-| RET    | Terminate UI and print highlighted line to stdout. |
-| C-f    | Toggle filtering.                                  |
+| Key      | Function                                           |
+|----------|----------------------------------------------------|
+| ESC      | Abort.                                             |
+| C-g      | Abort.                                             |
+| up C-p   | Select previous item.                              |
+| down C-n | Select next item.                                  |
+| pgup     | Move focus backward a screenful.                   |
+| pgdown   | Move focus forward a screenful.                    |
+| RET      | Terminate UI and print highlighted line to stdout. |
+| C-f      | Toggle filtering.                                  |
 
 
 ## Use cases
