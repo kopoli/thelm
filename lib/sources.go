@@ -38,6 +38,8 @@ type SourceReader struct {
 	Source
 }
 
+var _ AsyncSource = (*SourceReader)(nil)
+
 func (r *SourceReader) IsOneShot() bool {
 	return true
 }
@@ -106,8 +108,10 @@ type Command struct {
 	MaxLines int
 
 	Source
-	io.Writer
 }
+
+var _ io.Writer = (*Command)(nil)
+var _ AsyncSource = (*Command)(nil)
 
 // Data will be written to the internal buffer from another process
 func (c *Command) Write(p []byte) (n int, err error) {
