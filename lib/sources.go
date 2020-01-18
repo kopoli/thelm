@@ -132,7 +132,8 @@ func (c *Command) Write(p []byte) (n int, err error) {
 func (c *Command) Finish() (err error) {
 	c.mutex.Lock()
 	if c.cmd != nil {
-		c.cmd.Process.Kill()
+		_ = c.cmd.Process.Kill()
+		_ = c.cmd.Wait()
 	}
 	c.mutex.Unlock()
 	return
