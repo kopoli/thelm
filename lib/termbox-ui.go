@@ -97,6 +97,12 @@ func (u *ui) setStatusLine(lines int) {
 
 // Runs the command that has been stored in input and hiddenArgs
 func (u *ui) RunCommand() {
+	if !u.source.IsOneShot() {
+		// Finish the possibly previous command run
+		u.source.Finish()
+
+		u.view.Clear()
+	}
 
 	line := u.input
 	var args []string
@@ -137,9 +143,6 @@ func (u *ui) Refresh(update bool) {
 		u.view.Clear()
 		u.filter.buf.Filter(u.input)
 	} else {
-		if !u.source.IsOneShot() {
-			u.view.Clear()
-		}
 		u.RunCommand()
 	}
 
