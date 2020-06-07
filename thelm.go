@@ -18,20 +18,15 @@ var (
 	exitValue    int = 0
 )
 
-func printErr(err error, message string, arg ...string) {
-	msg := ""
-	if err != nil {
-		msg = fmt.Sprintf(" (error: %s)", err)
-	}
-	fmt.Fprintf(os.Stderr, "Error: %s%s.%s\n", message, strings.Join(arg, " "), msg)
-}
-
 func fault(err error, message string, arg ...string) {
-	printErr(err, message, arg...)
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Error: %s%s: %s\n",
+			message, strings.Join(arg, " "), err)
 
-	// Exit goroutine and run all deferrals
-	exitValue = 1
-	runtime.Goexit()
+		// Exit goroutine and run all deferrals
+		exitValue = 1
+		runtime.Goexit()
+	}
 }
 
 func main() {
@@ -51,15 +46,11 @@ func main() {
 	}
 
 	profiler, err := thelm.SetupProfiler(opts)
-	if err != nil {
-		fault(err, "Starting profiling failed")
-	}
+	fault(err, "Starting profiling failed")
 	defer profiler.Close()
 
 	err = thelm.CheckSelfRunning(opts)
-	if err != nil {
-		fault(err, "Check that program isn't running in itself failed")
-	}
+	fault(err, "Check that program isn't running in itself failed")
 
 	line, err := thelm.Ui(opts, args)
 	if err == thelm.UiAbortedErr {
@@ -70,9 +61,7 @@ func main() {
 		exitValue = 1
 		return
 	}
-	if err != nil {
-		fault(err, "Running user interface failed")
-	}
+	fault(err, "Running user interface failed")
 
 	fmt.Println(line)
 }
