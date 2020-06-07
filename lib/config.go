@@ -2,12 +2,12 @@ package thelm
 
 import (
 	"github.com/casimir/xdg-go"
-	util "github.com/kopoli/go-util"
+	"github.com/kopoli/appkit"
 )
 
 // DefaultConfigFile gets the default configuration file name based on given
 // Options
-func DefaultConfigFile(opts util.Options) string {
+func DefaultConfigFile(opts appkit.Options) string {
 	app := xdg.App{Name: opts.Get("application-name", "gogr")}
 	return app.ConfigPath(opts.Get("configuration-file", "config.json"))
 }

@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	util "github.com/kopoli/go-util"
+	"github.com/kopoli/appkit"
 )
 
 const thelmEnv = "_THELM_RUNNING_"
 
-func CheckSelfRunning(opts util.Options) (err error) {
+func CheckSelfRunning(opts appkit.Options) (err error) {
 	running := os.Getenv(thelmEnv)
 	if running != "" {
 		progName := opts.Get("program-name", "thelm")

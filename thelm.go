@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"strings"
 
-	util "github.com/kopoli/go-util"
+	"github.com/kopoli/appkit"
 	"github.com/kopoli/thelm/lib"
 )
 
@@ -35,7 +35,7 @@ func fault(err error, message string, arg ...string) {
 }
 
 func main() {
-	opts := util.NewOptions()
+	opts := appkit.NewOptions()
 	opts.Set("program-name", os.Args[0])
 	opts.Set("program-version", progVersion)
 	opts.Set("program-timestamp", timestamp)
@@ -50,7 +50,7 @@ func main() {
 		fault(err, "Parsing command line failed")
 	}
 
-	profiler, err := util.SetupProfiler(opts)
+	profiler, err := thelm.SetupProfiler(opts)
 	if err != nil {
 		fault(err, "Starting profiling failed")
 	}

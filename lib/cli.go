@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/jawher/mow.cli"
-	util "github.com/kopoli/go-util"
+	"github.com/kopoli/appkit"
 )
 
 // hideHelp hides the -h or --help argument if it appears after the -- argument
@@ -43,7 +43,7 @@ func unhideHelp(args []string) []string {
 	return args
 }
 
-func Cli(opts util.Options, argsin []string) (args []string, err error) {
+func Cli(opts appkit.Options, argsin []string) (args []string, err error) {
 	progName := opts.Get("program-name", "thelm")
 	app := cli.App(progName, "Helm for terminal")
 
@@ -51,7 +51,7 @@ func Cli(opts util.Options, argsin []string) (args []string, err error) {
 
 	app.Spec = "[OPTIONS] [-- ARG...]"
 
-	app.Version("version v", util.VersionString(opts))
+	app.Version("version v", appkit.VersionString(opts))
 
 	optFilter := app.BoolOpt("f filter", false, "Start filtering after running command.")
 	optDefault := app.StringOpt("d default", "", "The default argument that will be printed out if aborted.")
