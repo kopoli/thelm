@@ -1,5 +1,7 @@
 package main
 
+//go:generate licrep -o licenses.go
+
 import (
 	"fmt"
 	"os"
@@ -7,15 +9,16 @@ import (
 	"strings"
 
 	"github.com/kopoli/appkit"
-	"github.com/kopoli/thelm/lib"
+	thelm "github.com/kopoli/thelm/lib"
 )
 
 var (
-	majorVersion     = "0"
-	version          = "Undefined"
-	timestamp        = "Undefined"
-	progVersion      = majorVersion + "-" + version
-	exitValue    int = 0
+	version         = "Undefined"
+	timestamp       = "Undefined"
+	buildGOOS       = "Undefined"
+	buildGOARCH     = "Undefined"
+	progVersion     = "" + version
+	exitValue   int = 0
 )
 
 func fault(err error, message string, arg ...string) {
@@ -34,6 +37,8 @@ func main() {
 	opts.Set("program-name", os.Args[0])
 	opts.Set("program-version", progVersion)
 	opts.Set("program-timestamp", timestamp)
+	opts.Set("program-buildgoos", buildGOOS)
+	opts.Set("program-buildgoarch", buildGOARCH)
 
 	// In the last deferred function, exit the program with given code
 	defer func() {
@@ -41,8 +46,15 @@ func main() {
 	}()
 
 	args, err := thelm.Cli(opts, os.Args)
-	if err != nil {
-		fault(err, "Parsing command line failed")
+	fault(err, "Parsing command line failed")
+
+	if opts.IsSet("show-licenses") {
+		l, err := GetLicenses()
+		fault(err, "Getting licenses failed")
+		s, err := appkit.LicenseString(l)
+		fault(err, "Interpreting licenses failed")
+		fmt.Print(s)
+		return
 	}
 
 	profiler, err := thelm.SetupProfiler(opts)

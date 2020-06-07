@@ -1,9 +1,10 @@
 package thelm
 
 import (
+	"fmt"
 	"strings"
 
-	"github.com/jawher/mow.cli"
+	cli "github.com/jawher/mow.cli"
 	"github.com/kopoli/appkit"
 )
 
@@ -61,6 +62,7 @@ func Cli(opts appkit.Options, argsin []string) (args []string, err error) {
 	optTitle := app.StringOpt("t title", progName, "Title string in UI.")
 	optFile := app.StringOpt("F file", "", "The file which will be read instead of running a command.")
 	optPipe := app.BoolOpt("P pipe", false, "The data will be read through a pipe.")
+	optLicenses := app.BoolOpt("licenses", false, fmt.Sprintf("Show licenses of %s.", progName))
 
 	optCpuProfile := app.StringOpt("cpu-profile-file", "", "The CPU profile would be saved to this file.")
 	optMemProfile := app.StringOpt("memory-profile-file", "", "The Memory profile would be saved to this file.")
@@ -82,6 +84,9 @@ func Cli(opts appkit.Options, argsin []string) (args []string, err error) {
 		}
 		if *optRelaxedRe {
 			opts.Set("relaxed-regexp", "t")
+		}
+		if *optLicenses {
+			opts.Set("show-licenses", "t")
 		}
 
 		opts.Set("input-file", *optFile)
