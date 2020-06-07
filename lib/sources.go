@@ -87,7 +87,7 @@ func (f *SourceFile) Run(args ...string) (err error) {
 	var file *os.File
 	file, err = os.Open(f.FileName)
 	if err != nil {
-		err = E.Annotate(err, "Could not open file to read")
+		err = ErrAnnotate(err, "Could not open file to read")
 		return
 	}
 	f.Input = file

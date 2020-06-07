@@ -18,7 +18,7 @@ type Profiler struct {
 func createProfileFile(outfile string) (fp *os.File, err error) {
 	fp, err = os.Create(outfile)
 	if err != nil {
-		err = E.Annotate(err, "Could not create profile file", outfile)
+		err = ErrAnnotate(err, "Could not create profile file", outfile)
 	}
 	return
 }

@@ -36,10 +36,10 @@ type ui struct {
 }
 
 // UiAbortedErr tells if user wanted to abort
-var UiAbortedErr = E.New("User interface was aborted")
+var UiAbortedErr = fmt.Errorf("User interface was aborted")
 
 // UiSelectedErr tells that user selected a line
-var UiSelectedErr = E.New("User selected a line")
+var UiSelectedErr = fmt.Errorf("User selected a line")
 
 // Input line handling
 
