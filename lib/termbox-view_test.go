@@ -131,22 +131,22 @@ func TestUIView_Write(t *testing.T) {
 		{"One line", UIView{buffer: []byte("a")}, args{[]byte("b\n")}, 2, false, []byte("ab\n"), 1},
 		{"Many lines", UIView{buffer: []byte("a\nb\n"), lines: 2}, args{[]byte("c\n")}, 2, false, []byte("a\nb\nc\n"), 3},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			u := &tt.u
-			gotN, err := u.Write(tt.args.p)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("UIView.Write() error = %v, wantErr %v", err, tt.wantErr)
+	for i := range tests {
+		t.Run(tests[i].name, func(t *testing.T) {
+			u := &tests[i].u
+			gotN, err := u.Write(tests[i].args.p)
+			if (err != nil) != tests[i].wantErr {
+				t.Errorf("UIView.Write() error = %v, wantErr %v", err, tests[i].wantErr)
 				return
 			}
-			if gotN != tt.wantN {
-				t.Errorf("UIView.Write() = %v, want %v", gotN, tt.wantN)
+			if gotN != tests[i].wantN {
+				t.Errorf("UIView.Write() = %v, want %v", gotN, tests[i].wantN)
 			}
-			if !reflect.DeepEqual(u.buffer, tt.wantBuffer) {
-				t.Errorf("UIView.buffer = %v, want %v", u.buffer, tt.wantBuffer)
+			if !reflect.DeepEqual(u.buffer, tests[i].wantBuffer) {
+				t.Errorf("UIView.buffer = %v, want %v", u.buffer, tests[i].wantBuffer)
 			}
-			if u.lines != tt.wantLines {
-				t.Errorf("UIView.lines = %v, want %v", u.lines, tt.wantLines)
+			if u.lines != tests[i].wantLines {
+				t.Errorf("UIView.lines = %v, want %v", u.lines, tests[i].wantLines)
 			}
 		})
 	}

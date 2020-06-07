@@ -99,7 +99,7 @@ func (u *ui) setStatusLine(lines int) {
 func (u *ui) RunCommand() {
 	if !u.source.IsOneShot() {
 		// Finish the possibly previous command run
-		u.source.Finish()
+		_ = u.source.Finish()
 
 		u.view.Clear()
 	}
@@ -141,7 +141,10 @@ func (u *ui) Refresh(update bool) {
 	// Generate the output
 	if u.filter != nil {
 		u.view.Clear()
-		u.filter.buf.Filter(u.input)
+		err := u.filter.buf.Filter(u.input)
+		if err != nil {
+			return
+		}
 	} else {
 		u.RunCommand()
 	}
@@ -200,8 +203,7 @@ func (u *ui) moveCursor(ydiff int) error {
 
 func (u *ui) moveCursorPage(ydiff int) error {
 	_, ypage := u.view.ViewSize()
-	u.moveCursor(ydiff * ypage)
-	return nil
+	return u.moveCursor(ydiff * ypage)
 }
 
 func (u *ui) cmdSelectUp(termbox.Key) error {
@@ -239,15 +241,24 @@ func (u *ui) cmdToggleFilter(termbox.Key) error {
 		u.input = ""
 		u.cursor = 0
 		u.filter.buf.Passthrough = u
-		io.Copy(&u.filter.buf, &u.view)
+		_, err := io.Copy(&u.filter.buf, &u.view)
+		if err != nil {
+			return err
+		}
 	} else {
 		_, line := u.view.GetHighlightLine()
 		u.view.Clear()
-		io.Copy(&u.view, &u.filter.buf)
+		_, err := io.Copy(&u.view, &u.filter.buf)
+		if err != nil {
+			return err
+		}
 		u.view.MoveHighlightAndView(u.filter.buf.GetRealLine(line))
 		u.input = u.filter.savedInput
 		u.cursor = u.filter.savedCursor
-		u.filter.buf.Close()
+		err = u.filter.buf.Close()
+		if err != nil {
+			return err
+		}
 		u.filter = nil
 	}
 	u.setStatusLine(0)
@@ -342,7 +353,10 @@ func Ui(opts appkit.Options, args []string) (ret string, err error) {
 
 	if enableFiltering {
 		u.source.Wait()
-		u.cmdToggleFilter(termbox.KeyCtrlF)
+		err = u.cmdToggleFilter(termbox.KeyCtrlF)
+		if err != nil {
+			return
+		}
 		u.Refresh(true)
 	}
 
@@ -368,6 +382,4 @@ func Ui(opts appkit.Options, args []string) (ret string, err error) {
 			return
 		}
 	}
-
-	return
 }

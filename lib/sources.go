@@ -121,7 +121,7 @@ func (c *Command) Write(p []byte) (n int, err error) {
 		p = bytes.Join(linedata[0:c.MaxLines-c.lines], []byte("\n"))
 		p = append(p, []byte(fmt.Sprintf("\n-- command output cut off at %d lines --\n", c.MaxLines))...)
 		lines = c.MaxLines - c.lines
-		c.Finish()
+		_ = c.Finish()
 	}
 
 	c.lines += lines
@@ -143,14 +143,14 @@ func (c *Command) Finish() (err error) {
 func (c *Command) Wait() {
 	c.mutex.Lock()
 	if c.cmd != nil {
-		c.cmd.Wait()
+		_ = c.cmd.Wait()
 	}
 	c.mutex.Unlock()
 }
 
 // Run given command with args
 func (c *Command) Run(args ...string) (err error) {
-	c.Finish()
+	_ = c.Finish()
 
 	if len(args) == 0 || args[0] == "" {
 		return

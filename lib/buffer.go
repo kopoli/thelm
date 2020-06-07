@@ -84,10 +84,7 @@ func (b *Buffer) Filter(regex string) (err error) {
 		}
 
 		// Hang until the next call to Filter
-		select {
-		case <-b.done:
-		}
-		return
+		<-b.done
 	}()
 
 	return

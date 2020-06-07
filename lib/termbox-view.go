@@ -120,7 +120,7 @@ func (u *UIView) Flush() {
 
 	// Clear the screen
 	const coldef = termbox.ColorDefault
-	termbox.Clear(coldef, coldef)
+	_ = termbox.Clear(coldef, coldef)
 
 	u.updateViewSize()
 
