@@ -33,8 +33,6 @@ Basic operation is the following:
 
 ### Command line
 
-**Warning**: This is still alpha version, so the command line options and behaviour might yet change.
-
 ```
 $ ./thelm --help
 
@@ -43,20 +41,21 @@ Usage: ./thelm [OPTIONS] [-- ARG...]
 Helm for terminal
 
 Arguments:
-  ARG=[]       Command to be run
+  ARG                         Command to be run
 
 Options:
-  --version, -v                Show the version and exit
-  -f, --filter=false           Start filtering after running command.
-  -d, --default=""             The default argument that will be printed out if aborted.
-  -i, --hide-initial=false     Hide command given at the command line.
-  -s, --single-arg=false       Regard input given in the UI as a single argument to the program.
-  -r, --relaxed-regexp=false   Regard input as a relaxed regexp. Implies --single-arg.
-  -t, --title="./thelm"        Title string in UI.
-  -F, --file=""                The file which will be read instead of running a command.
-  -P, --pipe=false             The data will be read through a pipe.
-  --cpu-profile-file=""        The CPU profile would be saved to this file.
-  --memory-profile-file=""     The Memory profile would be saved to this file.
+  -v, --version               Show the version and exit
+  -f, --filter                Start filtering after running command.
+  -d, --default               The default argument that will be printed out if aborted.
+  -i, --hide-initial          Hide command given at the command line.
+  -s, --single-arg            Regard input given in the UI as a single argument to the program.
+  -r, --relaxed-regexp        Regard input as a relaxed regexp. Implies --single-arg.
+  -t, --title                 Title string in UI. (default "./thelm")
+  -F, --file                  The file which will be read instead of running a command.
+  -P, --pipe                  The data will be read through a pipe.
+      --licenses              Show licenses of ./thelm.
+      --cpu-profile-file      The CPU profile would be saved to this file.
+      --memory-profile-file   The Memory profile would be saved to this file.
 ```
 
 Concepts:
@@ -83,8 +82,6 @@ Concepts:
 
 ### Key bindings within the narrowing UI
 
-**Warning**: This is still alpha version, so the key bindings might yet change.
-
 | Key      | Function                                           |
 |----------|----------------------------------------------------|
 | ESC      | Abort.                                             |
@@ -102,12 +99,11 @@ Concepts:
 ### Insert a command to prompt from history
 
 This is comparable to the "C-r" binding in bash and zsh. I have only zsh
-configuration for this setup. It can be
-found [here](use-cases/retrieve-history/zsh). This is configured to "Meta-,"
+configuration for this setup. It can be found
+[here](use-cases/retrieve-history/zsh). This is configured to "Meta-,"
 keybinding by default.
 
 ![insert command animation](https://github.com/kopoli/thelm/raw/master/use-cases/retrieve-history/animation.gif)
-
 
 ### Choose directory where to jump from directory stack
 
@@ -115,9 +111,6 @@ The ZSH configuration is in [here](use-cases/jump-dirstack/zsh). It uses
 "Meta-." key binding by default.
 
 ![jump dirstack animation](https://github.com/kopoli/thelm/raw/master/use-cases/jump-dirstack/animation.gif)
-
-*Note: This might be possible with other shells also. Pull requests welcome :)*
-
 
 ### Running ag or git-grep continuously
 
@@ -127,8 +120,9 @@ $ ./thelm --hide-initial --single-arg ag
 
 ![continuous ag animation](https://github.com/kopoli/thelm/raw/master/use-cases/continuous-ag/animation.gif)
 
-This is marginally useful from the terminal. Obviously I
-prefer [helm-grepint](https://github.com/kopoli/helm-grepint) for Emacs.
+This is marginally useful from the terminal. Obviously I prefer
+[helm-grepint](https://github.com/kopoli/helm-grepint) for Emacs.
+
 
 ## License
 
