@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"reflect"
 	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
 func TestSourceReader(t *testing.T) {
@@ -21,12 +20,18 @@ func TestSourceReader(t *testing.T) {
 	sr.SetOutput(&out)
 
 	err := sr.Run()
-	require.NoError(t, err, "Run should succeed")
+	if err != nil {
+		t.Fatal("Run should succeed:", err)
+	}
 
 	err = sr.Finish()
-	require.NoError(t, err, "Finish should succeed")
+	if err != nil {
+		t.Fatal("Finish should succeed:", err)
+	}
 
-	require.Equal(t, data, out.String(), "SourceReader should copy input to output")
+	if data != out.String() {
+		t.Fatal("SourceReader should copy input to output")
+	}
 }
 
 func TestSourcefile(t *testing.T) {
@@ -40,13 +45,21 @@ func TestSourcefile(t *testing.T) {
 
 	fp.SetOutput(&out)
 	err := fp.Run()
-	require.NoError(t, err, "Run should succeed'")
+	if err != nil {
+		t.Fatal("Run should succeed:", err)
+	}
 
 	err = fp.Finish()
-	require.NoError(t, err, "Finish should succeed'")
+	if err != nil {
+		t.Fatal("Finish should succeed:", err)
+	}
 
 	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		t.Fatal("Internal error: reading file contents failed:", err)
+	}
 
-	require.NoError(t, err, "Internal error: reading file contents failed")
-	require.EqualValues(t, data, out.Bytes(), "File read output should be equal")
+	if !reflect.DeepEqual(data, out.Bytes()) {
+		t.Fatal("File read output should be equal")
+	}
 }
